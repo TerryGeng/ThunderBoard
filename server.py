@@ -1,7 +1,8 @@
+import io
 import threading
+import socket
 import struct
 import logging
-import zmq
 from flask import Flask, render_template
 from flask_socketio import SocketIO, emit, join_room, leave_room
 
@@ -13,7 +14,7 @@ class ClientSubscription:
         self.subscription = {}
 
 class DashboardServer:
-    def __init__(self, recv_server_host = "*", recv_server_port = 2333, web_server_host = "0.0.0.0", web_server_port = 2334):
+    def __init__(self, recv_server_host = "0.0.0.0", recv_server_port = 2333, web_server_host = "0.0.0.0", web_server_port = 2334):
         self.recv_server_host = recv_server_host
         self.recv_server_port = recv_server_port
         self.web_server_host = web_server_host
@@ -23,68 +24,84 @@ class DashboardServer:
         self.clients = {}
 
     def serve(self):
-        logging.info(f"Initializing data-receiving server at {self.recv_server_host}:{self.recv_server_port} ....")
-        self.init_recv_server(self.recv_server_host, self.recv_server_port)
+        logging.info(f"Initializing data-receiving server at {self.recv_server_host}:{self.recv_server_port} "
+                     f"in separated thread....")
+        self.recv_socket = socket.socket()
+        self.recv_socket.bind((self.recv_server_host, self.recv_server_port))
+
         recv_thread = threading.Thread(target=self.recv_loop, name="RecvThread")
         recv_thread.daemon = True
         recv_thread.start()
 
         logging.info(f"Initializing web server at {self.web_server_host}:{self.web_server_port} ....")
-        self.run_web_server(self.web_server_host, self.web_server_port)
+        self.run_web_server()
 
-    def init_recv_server(self, recv_server_host = "*", recv_server_port = 2333):
-        self.recv_context = zmq.Context()
-        self.recv_socket = self.recv_context.socket(zmq.PULL)
-        self.recv_socket.bind(f"tcp://{recv_server_host}:{recv_server_port}")
-        self.recv_poller = zmq.Poller()
-        self.recv_poller.register(self.recv_socket, zmq.POLLIN)
-
-    def run_web_server(self, web_server_host = "0.0.0.0", web_server_port = 2334):
+    # This function need to run in main thread. This required by Flask.
+    def run_web_server(self):
         self.flask_app = Flask(__name__)
         self.socketio = SocketIO(self.flask_app)
         self.register_web_server_methods(self.flask_app, self.socketio)
-        self.socketio.run(self.flask_app, host=web_server_host, port=web_server_port)
+        self.socketio.run(self.flask_app, host=self.web_server_host, port=self.web_server_port)
 
-    def _unpack_msg(self, msg):
-        # Unpack metadata
-        metadata_len, = struct.unpack('h', msg[0:2])
-        metadata = msg[2: metadata_len+2].decode('utf-8')
-        lines = metadata.split()
+    def recv_chunk(self, _socket, length):
+        received = 0
+        chunks = io.BytesIO()
+        while received < length:
+            chunk = _socket.recv(length)
+            if chunk == b'':
+                raise ConnectionError("Socket connection broken")
+            chunks.write(chunk)
+            received += len(chunk)
 
-        type = ""
-        id = ""
-        name = ""
-        for line in lines:
-            if line:
-                key, value = line.split("=", 1)
-                if key == "Type":
-                    type = value
-                elif key == "Id":
-                    id = value
-                elif key == "Name":
-                    name = value
+        return chunks.getbuffer()
 
-        data = msg[metadata_len + 2:]
-
-        return type, id, name, data
-
-    def update_object(self, type, id, name, data):
-        if not id in self.objects:
-            self.objects[id] = self.object_create_handlers[type](name)
-
-        self.objects[id].update(data)
-
-    def recv_loop(self):
+    def maintain_connection(self, conn, addr):
         while True:
             try:
-                socks = dict(self.recv_poller.poll())
-                if self.recv_socket in socks:
-                    print("incoming message!")
-                    msg = self.recv_socket.recv()
-                    type, id, name, data = self._unpack_msg(msg)
-                    self.update_object(type, id, name, data)
+                # get metadata length
+                metadata_length, = struct.unpack("h", self.recv_chunk(conn, 2))
+
+                # get metadata
+                metadata = self.recv_chunk(conn, metadata_length).tobytes().decode('utf-8')
+
+                type = ""
+                id = ""
+                name = ""
+                length = 0
+                for line in metadata.split("\n"):
+                    if line:
+                        key, value = line.split("=", 1)
+                        if key == "Type":
+                            type = value
+                        elif key == "Id":
+                            id = value
+                        elif key == "Name":
+                            name = value
+                        elif key == "Length":
+                            length = int(value)
+
+                data = self.recv_chunk(conn, length)
+
+                if not id in self.objects:
+                    self.objects[id] = self.object_create_handlers[type](name)
+
+                self.objects[id].update(data.tobytes())
+            except ConnectionError:
+                logging.debug(f"Lost connection with {addr[0]}:{addr[1]}")
+                return
+
+    def recv_loop(self):
+        self.recv_socket.listen()
+        while True:
+            try:
+                conn, addr = self.recv_socket.accept()
+                logging.debug(f"Connection established with {addr[0]}:{addr[1]}")
+                th = threading.Thread(target=self.maintain_connection, args=(conn, addr), name=f"Recv-{addr[0]}:{addr[1]}")
+                th.start()
             except KeyboardInterrupt:
                 break
+
+        self.recv_socket.close()
 
     def register_web_server_methods(self, app, socketio):
         # I don't know if there's any other elegant way of doing this.
@@ -105,7 +122,7 @@ class DashboardServer:
 
 if __name__ == '__main__':
     logger = logging.getLogger()
-    logger.setLevel(logging.INFO)
+    logger.setLevel(logging.DEBUG)
     formatter = logging.Formatter('[%(asctime)s %(levelname)s %(threadName)s] %(message)s', "%b %d %H:%M:%S")
     handler = logging.StreamHandler()
     handler.setFormatter(formatter)

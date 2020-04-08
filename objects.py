@@ -1,5 +1,6 @@
 import io
 import base64
+import logging
 
 class BaseObject:
     type = "base"
@@ -34,6 +35,7 @@ class TextObject(BaseObject):
     def update(self, text_data):
         self.version += 1
         self.text = text_data.decode('utf-8')
+        logging.debug(self.text)
 
     def dump(self):
         return self.text
