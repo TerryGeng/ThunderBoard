@@ -1,0 +1,6 @@
+venv/
+static/node_modules/
+.idea/
+.DS_Store
+static/package-lock.json
+__pycache__/
