@@ -3,15 +3,12 @@ import threading
 import socket
 import struct
 import logging
+import time
+
 from flask import Flask, render_template
 from flask_socketio import SocketIO, emit, join_room, leave_room
 
 import objects
-
-class ClientSubscription:
-    def __init__(self, client_id):
-        self.client_id = client_id
-        self.subscription = {}
 
 class DashboardServer:
     def __init__(self, recv_server_host = "0.0.0.0", recv_server_port = 2333, web_server_host = "0.0.0.0", web_server_port = 2334):
@@ -21,7 +18,8 @@ class DashboardServer:
         self.web_server_port = web_server_port
         self.object_create_handlers = {}
         self.objects = {}
-        self.clients = {}
+        self.clients = []
+        self.object_subscriptions = {}
 
     def serve(self):
         logging.info(f"Initializing data-receiving server at {self.recv_server_host}:{self.recv_server_port} "
@@ -32,6 +30,7 @@ class DashboardServer:
         recv_thread = threading.Thread(target=self.recv_loop, name="RecvThread")
         recv_thread.daemon = True
         recv_thread.start()
+
 
         logging.info(f"Initializing web server at {self.web_server_host}:{self.web_server_port} ....")
         self.run_web_server()
@@ -84,8 +83,11 @@ class DashboardServer:
 
                 if not id in self.objects:
                     self.objects[id] = self.object_create_handlers[type](name)
+                    self.object_subscriptions[id] = []
+                    self.send_new_object_notification(id)
 
                 self.objects[id].update(data.tobytes())
+                self.send_update(id)
             except ConnectionError:
                 logging.debug(f"Lost connection with {addr[0]}:{addr[1]}")
                 return
@@ -103,6 +105,19 @@ class DashboardServer:
 
         self.recv_socket.close()
 
+    def send_update(self, object_id):
+        if object_id in self.object_subscriptions and self.object_subscriptions[object_id]:
+            object = self.objects[object_id]
+            logging.debug(f"Send updated data ver {object.version} of {object.name}")
+            self.socketio.emit('update', {
+                'obj_id': object_id,
+                'version': object.version,
+                'data': object.dump(),
+            }, room=object_id)
+
+    def send_new_object_notification(self, obj_id):
+        self.socketio.emit('new object available', obj_id)
+
     def register_web_server_methods(self, app, socketio):
         # I don't know if there's any other elegant way of doing this.
         # Flask suggests I create apps at module level but this certainly doesn't fit our use case.
@@ -115,9 +130,26 @@ class DashboardServer:
         def join():
             id = 0
             if self.clients:
-                id = max(self.clients.keys()) + 1
-            join_room(id)
+                id = max(self.clients) + 1
+
+            logging.debug(f"Client {id} joined.")
+            self.clients.append(id)
+            for obj_id, object in self.objects.items():
+                join_room(obj_id)
+                self.object_subscriptions[obj_id].append(id)
+
             emit("id assigned", id)
+
+        @socketio.on('subscribe')
+        def subscribe(obj_id):
+            if obj_id in self.objects:
+                self.object_subscriptions[obj_id].append(id)
+                join_room(obj_id)
+
+        @socketio.on('leave')
+        def leave(id):
+            del self.clients[id]
+
 
 
 if __name__ == '__main__':

@@ -35,9 +35,15 @@
     socket.on('connect', function() {
         socket.emit('join');
     });
+    socket.on('new object available', function(obj_id){
+        socket.emit('subscribe', obj_id);
+    });
     socket.on('id assigned', function(id){
-        console.log(id);
+        console.log("Client id assigned" + id.toString());
         client_id = id;
+    });
+    socket.on('update', function(json){
+        console.log(json)
     });
 </script>
 </html>

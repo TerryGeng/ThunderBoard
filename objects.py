@@ -27,6 +27,7 @@ class TextObject(BaseObject):
     def __init__(self, name):
         super().__init__(name)
         self.text = ""
+        self.version = 0
 
     @staticmethod
     def init(name):
@@ -35,7 +36,7 @@ class TextObject(BaseObject):
     def update(self, text_data):
         self.version += 1
         self.text = text_data.decode('utf-8')
-        logging.debug(self.text)
+        logging.debug(f"ver {self.version}: {self.text}")
 
     def dump(self):
         return self.text
