@@ -38,6 +38,8 @@ class DashboardServer:
     # This function need to run in main thread. This required by Flask.
     def run_web_server(self):
         self.flask_app = Flask(__name__)
+        #self.flask_app.config['DEBUG'] = True
+        self.flask_app.config['TEMPLATES_AUTO_RELOAD'] = True
         self.socketio = SocketIO(self.flask_app)
         self.register_web_server_methods(self.flask_app, self.socketio)
         self.socketio.run(self.flask_app, host=self.web_server_host, port=self.web_server_port)
@@ -110,8 +112,10 @@ class DashboardServer:
             object = self.objects[object_id]
             logging.debug(f"Send updated data ver {object.version} of {object.name}")
             self.socketio.emit('update', {
-                'obj_id': object_id,
+                'id': object_id,
+                'type': object.type,
                 'version': object.version,
+                'name': object.name,
                 'data': object.dump(),
             }, room=object_id)
 

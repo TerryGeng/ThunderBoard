@@ -2,48 +2,255 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
+    <title>ThunderBoard</title>
     <link id="pagestyle" rel="stylesheet" href="static/css/bootstrap.min.css">
     <link rel="stylesheet" href="static/css/materialdesignicons.css">
     <link rel="stylesheet" href="static/css/custom.css">
-    <script src="static/js/socket.io.js"></script>
-    <title>ThunderBoard</title>
+    <!-- Tell the browser to be responsive to screen width -->
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <!-- Theme style -->
+    <link rel="stylesheet" href="static/css/adminlte.css">
 </head>
-<body>
+<body class="hold-transition sidebar-mini layout-fixed">
+<div class="wrapper">
 
-<nav class="navbar navbar-expand-lg navbar-light bg-light">
-  <a class="navbar-brand" href="#">ThunderBoard</a>
-  <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarSupportedContent" aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
-    <span class="navbar-toggler-icon"></span>
-  </button>
+    <!-- Navbar -->
+    <nav class="main-header navbar navbar-expand navbar-white navbar-light">
+        <!-- Left navbar links -->
+        <ul class="navbar-nav">
+            <li class="nav-item">
+                <a class="nav-link" data-widget="pushmenu" href="#" role="button"><span class="mdi mdi-home"></span></a>
+            </li>
+            <li class="nav-item d-none d-sm-inline-block">
+                <a href="#" class="nav-link">Home</a>
+            </li>
+        </ul>
 
-  <div class="collapse navbar-collapse" id="navbarSupportedContent">
-    <ul class="navbar-nav mr-auto">
-      <li class="nav-item active">
-        <a class="nav-link" href="#">Home <span class="sr-only">(current)</span></a>
-      </li>
-    </ul>
-  </div>
-</nav>
+        <!-- Right navbar links -->
+        <ul class="navbar-nav ml-auto">
+            <!-- Notifications Dropdown Menu -->
+            <li class="nav-item dropdown">
+                <a class="nav-link" data-toggle="dropdown" href="#">
+                    <span class="mdi mdi-message-alert-outline"></span>
+                    <span class="badge badge-warning navbar-badge">15</span>
+                </a>
+                <div class="dropdown-menu dropdown-menu-lg dropdown-menu-right">
+                    <span class="dropdown-item dropdown-header">15 Notifications</span>
+                    <div class="dropdown-divider"></div>
+                    <a href="#" class="dropdown-item">
+                        <span class="mdi mdi-message"></span> 4 new messages
+                        <span class="float-right text-muted text-sm">3 mins</span>
+                    </a>
+                    <div class="dropdown-divider"></div>
+                    <a href="#" class="dropdown-item dropdown-footer">See All Notifications</a>
+                </div>
+            </li>
+        </ul>
+    </nav>
+    <!-- /.navbar -->
 
-<div class="container">
+    <!-- Main Sidebar Container -->
+    <aside class="main-sidebar sidebar-dark-primary elevation-4">
+        <!-- Brand Logo -->
+        <a href="." class="brand-link">
+            <!--<img src="static/img/logo.png" alt="Logo" class="brand-image img-circle elevation-3"
+                 style="opacity: .8">-->
+            <span class="brand-text font-weight-light">ThunderBoard</span>
+        </a>
+
+        <!-- Sidebar -->
+        <div class="sidebar">
+            <nav class="mt-2">
+                <ul class="nav nav-pills nav-sidebar flex-column" data-widget="treeview" role="menu" data-accordion="false">
+                    <!-- Add icons to the links using the .nav-icon class
+                         with font-awesome or any other icon font library -->
+                    <li class="nav-item has-treeview menu-open">
+                        <a href="#" class="nav-link active">
+                            <span class="nav-icon mdi mdi-information-outline"></span>
+                            <p>
+                                Dashboard
+                                <span class="mdi mdi-chevron-left"></span>
+                            </p>
+                        </a>
+                        <ul class="nav nav-treeview">
+                            <li class="nav-item">
+                                <a href="." class="nav-link active">
+                                    <span class="nav-icon mdi mdi-information-outline"></span>
+                                    <p>Dashboard</p>
+                                </a>
+                            </li>
+                        </ul>
+                    </li>
+                </ul>
+            </nav>
+            <!-- /.sidebar-menu -->
+        </div>
+        <!-- /.sidebar -->
+    </aside>
+
+    <!-- Content Wrapper. Contains page content -->
+    <div class="content-wrapper">
+        <!-- Content Header (Page header) -->
+        <div class="content-header">
+            <div class="container-fluid">
+                <div class="row mb-2">
+                    <div class="col-sm-6">
+                        <h1 class="m-0 text-dark">Dashboard</h1>
+                    </div><!-- /.col -->
+                    <div class="col-sm-6">
+                        <ol class="breadcrumb float-sm-right">
+                            <li class="breadcrumb-item"><a href="#">Home</a></li>
+                            <li class="breadcrumb-item active">Dashboard v1</li>
+                        </ol>
+                    </div><!-- /.col -->
+                </div><!-- /.row -->
+            </div><!-- /.container-fluid -->
+        </div>
+        <!-- /.content-header -->
+
+        <!-- Main content -->
+        <section class="content">
+            <div class="container-fluid">
+                <!-- Main row -->
+                <div class="row">
+                    <!-- Left col -->
+                    <section class="col-lg-7 connectedSortable" id="columnLeft">
+                        <!-- Custom tabs-->
+                        <div class="card" id="objectTemplate" style="display: none;">
+                            <div class="card-header">
+                                <h3 class="card-title objectTitle">
+                                    Message
+                                </h3>
+                                <div class="card-tools">
+                                    <button type="button" class="btn btn-tool objectActionMinimize" data-card-widget="collapse">
+                                        <span class="mdi mdi-window-minimize"></span>
+                                    </button>
+                                    <button type="button" class="btn btn-tool objectActionClose" data-card-widget="remove">
+                                        <span class="mdi mdi-window-close"></span>
+                                    </button>
+                                </div>
+                            </div><!-- /.card-header -->
+                            <div class="card-body">
+                                <div class="tab-content p-0 objectContent">
+                                    <!-- TEMPLATE -->
+                                    <!-- TEMPLATE -->
+                                    <!-- TEMPLATE -->
+                                    <!-- TEMPLATE -->
+                                    <!-- TEMPLATE -->
+                                </div>
+                            </div><!-- /.card-body -->
+                        </div>
+                        <!-- /.card -->
+
+                    </section>
+                    <!-- /.Left col -->
+                    <!-- right col (We are only adding the ID to make the widgets sortable)-->
+                    <section class="col-lg-5 connectedSortable">
+                        <!-- RIGHT COLUMN -->
+                    </section>
+                    <!-- right col -->
+                </div>
+                <!-- /.row (main row) -->
+            </div><!-- /.container-fluid -->
+        </section>
+        <!-- /.content -->
+    </div>
+    <!-- /.content-wrapper -->
+    <footer class="main-footer">
+        <strong>ThunderBoard</strong>
+    </footer>
+
+    <!-- Control Sidebar -->
+    <aside class="control-sidebar control-sidebar-dark">
+        <!-- Control sidebar content goes here -->
+    </aside>
+    <!-- /.control-sidebar -->
 </div>
-</body>
+<!-- ./wrapper -->
 
+<script src="static/js/jquery-3.4.1.min.js"></script>
+<script src="static/js/jquery-ui.js"></script>
+<script src="static/js/socket.io.js"></script>
+<!-- Resolve conflict in jQuery UI tooltip with Bootstrap tooltip -->
+<script>
+    $.widget.bridge('uibutton', $.ui.button)
+</script>
+<script src="static/js/bootstrap.bundle.min.js"></script>
+<!-- AdminLTE App -->
+<script src="static/js/adminlte.js"></script>
 <script type="text/javascript" charset="utf-8">
     var socket = io();
     var client_id = null;
-    socket.on('connect', function() {
+    socket.on('connect', function () {
         socket.emit('join');
     });
-    socket.on('new object available', function(obj_id){
+    socket.on('new object available', function (obj_id) {
         socket.emit('subscribe', obj_id);
     });
-    socket.on('id assigned', function(id){
-        console.log("Client id assigned" + id.toString());
+    socket.on('id assigned', function (id) {
+        console.log("Client id assigned " + id.toString());
         client_id = id;
     });
-    socket.on('update', function(json){
-        console.log(json)
+    socket.on('update', function (json) {
+        console.log(json);
+        updateObject(json);
     });
+
+    var $objects = {};
+    var $objectTemplateDiv = $("#objectTemplate");
+    var $columnLeft = $("#columnLeft");
+
+    function updateObject(json){
+        var on_create = false;
+
+        if (!(json.id in $objects)) {
+            on_create = true;
+            console.log("create new object " + json.id);
+            var object = $objectTemplateDiv.clone();
+            object.attr("id", "object_" + json.id);
+            $objects[json.id] = {
+                card: object,
+                title: object.find(".objectTitle"),
+                content: object.find(".objectContent")
+            };
+            object.appendTo($columnLeft);
+            setSortable();
+        }
+        if (json.type === 'text'){
+            if (on_create){ initTextObject(json); }
+            updateTextObject(json);
+        }
+
+        $objects[json.id].card.show();
+    }
+
+    function initTextObject(json){
+        $objects[json.id].content.css("max-height", "250px");
+        $objects[json.id].content.css("overflow", "auto");
+    }
+
+    function updateTextObject(json){
+        $objects[json.id].title.html(json.name);
+        if($objects[json.id].content[0].scrollHeight - $objects[json.id].content.scrollTop() <= $objects[json.id].content.height()){
+            $objects[json.id].content.append("<span>" + json.data + "</span><br />");
+            $objects[json.id].content.scrollTop($objects[json.id].content[0].scrollHeight);
+        }else{
+            $objects[json.id].content.append("<span>" + json.data + "</span><br />");
+        }
+    }
+
+    function setSortable() {
+        // Make the dashboard widgets sortable Using jquery UI
+        $('.connectedSortable').sortable({
+            placeholder: 'sort-highlight',
+            connectWith: '.connectedSortable',
+            handle: '.card-header, .nav-tabs',
+            forcePlaceholderSize: true,
+            zIndex: 999999
+        });
+        $('.connectedSortable .card-header, .connectedSortable .nav-tabs-custom').css('cursor', 'move');
+    }
+
 </script>
+</body>
 </html>
