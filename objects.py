@@ -2,6 +2,8 @@ import io
 import base64
 import logging
 
+from PIL import Image
+
 class BaseObject:
     type = "base"
 
@@ -13,12 +15,12 @@ class BaseObject:
     def init(name):
         return BaseObject(name)
 
-    def update(self, data):
+    def update(self, metadata, data):
         self.version += 1
         pass
 
-    def dump(self):
-        return ""
+    def dump_to(self, to_send):
+        return to_send
 
 
 class TextObject(BaseObject):
@@ -28,38 +30,61 @@ class TextObject(BaseObject):
         super().__init__(name)
         self.text = ""
         self.version = 0
+        self.rotate = True
 
     @staticmethod
     def init(name):
         return TextObject(name)
 
-    def update(self, text_data):
+    def update(self, metadata, text_data):
         self.version += 1
+        if metadata['rotate'] == 'True':
+            self.rotate = True
+        else:
+            self.rotate = False
+
         self.text = text_data.decode('utf-8')
         logging.debug(f"ver {self.version}: {self.text}")
 
-    def dump(self):
-        return self.text
+    def dump_to(self, dump_to):
+        dump_to['data'] = self.text
+        if self.rotate:
+            dump_to['rotate'] = 'True'
+        else:
+            dump_to['rotate'] = 'False'
+
+        return dump_to
 
 
 class ImageObject(BaseObject):
     type = "image"
 
+    IMAGE_MAX_SIZE = (650, 650)
+
     def __init__(self, name):
         super().__init__(name)
         self.image = None
-        self.image_buffer = io.BytesIO()
 
     @staticmethod
     def init(name):
         return ImageObject(name)
 
-    def update(self, image):
+    def update(self, metadata, image):
         self.version += 1
-        self.image = base64.b64encode(image).decode('utf-8')
+        if 'compress' not in metadata or metadata['compress'] == 'False':
+            im = Image.open(io.BytesIO(image))
+            im.thumbnail(self.IMAGE_MAX_SIZE, Image.ANTIALIAS)
+            buffer = io.BytesIO()
+            im = im.convert("RGB")
+            im.save(buffer, format="JPEG", dpi=[100, 100], quality=90)
+            self.image = base64.b64encode(buffer.getvalue()).decode('utf-8')
+        else:
+            self.image = base64.b64encode(image).decode('utf-8')
 
-    def dump(self):
-        return self.image
+    def dump_to(self, dump_to):
+        dump_to['data'] = self.image
+        return dump_to
+
 
 def register_object_types(server):
     server.object_create_handlers['text'] = TextObject.init

@@ -63,23 +63,18 @@ class DashboardServer:
                 metadata_length, = struct.unpack("h", self.recv_chunk(conn, 2))
 
                 # get metadata
-                metadata = self.recv_chunk(conn, metadata_length).tobytes().decode('utf-8')
+                metadata_str = self.recv_chunk(conn, metadata_length).tobytes().decode('utf-8')
+                metadata = {}
 
-                type = ""
-                id = ""
-                name = ""
-                length = 0
-                for line in metadata.split("\n"):
+                for line in metadata_str.split("\n"):
                     if line:
                         key, value = line.split("=", 1)
-                        if key == "Type":
-                            type = value
-                        elif key == "Id":
-                            id = value
-                        elif key == "Name":
-                            name = value
-                        elif key == "Length":
-                            length = int(value)
+                        metadata[key] = value
+
+                type = metadata['Type']
+                name = metadata['Name']
+                id = metadata['Id']
+                length = int(metadata['Length'])
 
                 data = self.recv_chunk(conn, length)
 
@@ -88,7 +83,7 @@ class DashboardServer:
                     self.object_subscriptions[id] = []
                     self.send_new_object_notification(id)
 
-                self.objects[id].update(data.tobytes())
+                self.objects[id].update(metadata, data.tobytes())
                 self.send_update(id)
             except ConnectionError:
                 logging.debug(f"Lost connection with {addr[0]}:{addr[1]}")
@@ -111,13 +106,14 @@ class DashboardServer:
         if object_id in self.object_subscriptions and self.object_subscriptions[object_id]:
             object = self.objects[object_id]
             logging.debug(f"Send updated data ver {object.version} of {object.name}")
-            self.socketio.emit('update', {
+            to_send = {
                 'id': object_id,
                 'type': object.type,
                 'version': object.version,
-                'name': object.name,
-                'data': object.dump(),
-            }, room=object_id)
+                'name': object.name
+            }
+            object.dump_to(to_send)
+            self.socketio.emit('update', to_send, room=object_id)
 
     def send_new_object_notification(self, obj_id):
         self.socketio.emit('new object available', obj_id)
@@ -145,10 +141,11 @@ class DashboardServer:
             emit("id assigned", id)
 
         @socketio.on('subscribe')
-        def subscribe(obj_id):
-            if obj_id in self.objects:
-                self.object_subscriptions[obj_id].append(id)
-                join_room(obj_id)
+        def subscribe(json):
+            if json['obj_id'] in self.objects:
+                self.object_subscriptions[json['obj_id']].append(json['client_id'])
+                join_room(json['obj_id'])
+                self.send_update(json['obj_id'])
 
         @socketio.on('leave')
         def leave(id):

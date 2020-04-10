@@ -3,7 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <title>ThunderBoard</title>
-    <link id="pagestyle" rel="stylesheet" href="static/css/bootstrap.min.css">
+    <link rel="stylesheet" href="static/css/bootstrap.min.css">
+    <link rel="stylesheet" href="static/css/jquery-ui.css">
     <link rel="stylesheet" href="static/css/materialdesignicons.css">
     <link rel="stylesheet" href="static/css/custom.css">
     <!-- Tell the browser to be responsive to screen width -->
@@ -131,11 +132,7 @@
                                 </div>
                             </div><!-- /.card-header -->
                             <div class="card-body">
-                                <div class="tab-content p-0 objectContent">
-                                    <!-- TEMPLATE -->
-                                    <!-- TEMPLATE -->
-                                    <!-- TEMPLATE -->
-                                    <!-- TEMPLATE -->
+                                <div class="tab-content p-0 objectContent" style="height: 100%; width: 100%;">
                                     <!-- TEMPLATE -->
                                 </div>
                             </div><!-- /.card-body -->
@@ -185,7 +182,7 @@
         socket.emit('join');
     });
     socket.on('new object available', function (obj_id) {
-        socket.emit('subscribe', obj_id);
+        socket.emit('subscribe', { obj_id: obj_id, client_id: client_id });
     });
     socket.on('id assigned', function (id) {
         console.log("Client id assigned " + id.toString());
@@ -219,7 +216,11 @@
         if (json.type === 'text'){
             if (on_create){ initTextObject(json); }
             updateTextObject(json);
+        }else if (json.type === 'image'){
+            if (on_create){ initImageObject(json); }
+            updateImageObject(json);
         }
+
 
         $objects[json.id].card.show();
     }
@@ -231,12 +232,34 @@
 
     function updateTextObject(json){
         $objects[json.id].title.html(json.name);
-        if($objects[json.id].content[0].scrollHeight - $objects[json.id].content.scrollTop() <= $objects[json.id].content.height()){
-            $objects[json.id].content.append("<span>" + json.data + "</span><br />");
-            $objects[json.id].content.scrollTop($objects[json.id].content[0].scrollHeight);
+        if(json.rotate === 'True') {
+            if ($objects[json.id].content[0].scrollHeight - $objects[json.id].content.scrollTop() <= $objects[json.id].content.height()) {
+                $objects[json.id].content.append("<span>" + json.data + "</span><br />");
+                $objects[json.id].content.scrollTop($objects[json.id].content[0].scrollHeight);
+            } else {
+                $objects[json.id].content.append("<span>" + json.data + "</span><br />");
+            }
         }else{
-            $objects[json.id].content.append("<span>" + json.data + "</span><br />");
+                $objects[json.id].content.html("<span>" + json.data + "</span>");
         }
+    }
+
+    function initImageObject(json){
+        var img_id = "object_img_" + json.id;
+        var img = $(`<img id="${img_id}" src="data:image/jpeg;base64,${json.data}" />`);
+        img.css("max-width", "100%");
+        img.appendTo($objects[json.id].content);
+        $objects[json.id].card.resizable({ handles: "n, s" });
+        $objects[json.id].img = img;
+        $objects[json.id].card.resize(function (){
+            console.log($objects[json.id].content.height());
+            $objects[json.id].img.height($objects[json.id].content.height());
+        });
+    }
+
+    function updateImageObject(json){
+        $objects[json.id].title.html(json.name);
+        $objects[json.id].img.attr("src", `data:image/jpeg;base64,${json.data}`);
     }
 
     function setSortable() {
