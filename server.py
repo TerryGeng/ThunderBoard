@@ -81,6 +81,7 @@ class DashboardServer:
 
                 type = metadata['Type']
                 name = metadata['Name']
+                board = metadata['Board']
                 length = int(metadata['Length'])
 
                 data = self.recv_chunk(conn, length)
@@ -98,7 +99,7 @@ class DashboardServer:
                     return
 
                 if not id in self.objects:
-                    self.objects[id] = self.object_create_handlers[type](name)
+                    self.objects[id] = self.object_create_handlers[type](name, board)
                     self.object_subscriptions[id] = []
                     self.send_new_object_notification(id)
 
@@ -138,6 +139,7 @@ class DashboardServer:
             to_send = {
                 'id': object_id,
                 'type': object.type,
+                'board': object.board,
                 'version': object.version,
                 'name': object.name
             }

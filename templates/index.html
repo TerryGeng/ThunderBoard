@@ -67,17 +67,17 @@
                          with font-awesome or any other icon font library -->
                     <li class="nav-item has-treeview menu-open">
                         <a href="#" class="nav-link active">
-                            <span class="nav-icon mdi mdi-information-outline"></span>
+                            <span class="nav-icon mdi mdi-bulletin-board"></span>
                             <p>
                                 Dashboard
-                                <span class="mdi mdi-chevron-left"></span>
+                                <i class="mdi mdi-chevron-left right"></i>
                             </p>
                         </a>
                         <ul class="nav nav-treeview">
-                            <li class="nav-item">
-                                <a href="." class="nav-link active">
-                                    <span class="nav-icon mdi mdi-information-outline"></span>
-                                    <p>Dashboard</p>
+                            <li class="nav-item boardNavItem" id="boardNavItemTemplate" style="display: none">
+                                <a href="javascript:;" class="nav-link boardNavDroppable">
+                                    <span class="nav-icon mdi mdi-speedometer"></span>
+                                    <p class="boardName">Default</p>
                                 </a>
                             </li>
                         </ul>
@@ -113,11 +113,10 @@
         <section class="content">
             <div class="container-fluid">
                 <!-- Main row -->
-                <div class="row">
-                    <!-- Left col -->
-                    <section class="col-lg-7 connectedSortable" id="columnLeft">
+                <div class="row" id="boardDiv">
+                    <section class="col-lg-7 connectedSortable columnLeft" id="columnLeftTemplate" style="display: none">
                         <!-- Custom tabs-->
-                        <div class="card objectActivate" id="objectTemplate" style="display: none;">
+                        <div class="card objectCard" id="objectTemplate" style="display: none;">
                             <div class="card-header">
                                 <h3 class="card-title">
                                     <span class="mdi mdi-play objectStatusIcon"></span>
@@ -141,12 +140,8 @@
                         <!-- /.card -->
 
                     </section>
-                    <!-- /.Left col -->
-                    <!-- right col (We are only adding the ID to make the widgets sortable)-->
-                    <section class="col-lg-5 connectedSortable">
-                        <!-- RIGHT COLUMN -->
+                    <section class="col-lg-5 connectedSortable columnRight" id="columnRightTemplate" style="display: none">
                     </section>
-                    <!-- right col -->
                 </div>
                 <!-- /.row (main row) -->
             </div><!-- /.container-fluid -->
@@ -207,36 +202,127 @@
 
     var $objects = {};
     var $objectTemplateDiv = $("#objectTemplate");
-    var $columnLeft = $("#columnLeft");
+    var $boards = {};
+    var $columnLeftTemplate = $("#columnLeftTemplate");
+    var $columnRightTemplate = $("#columnRightTemplate");
+    var $boardDiv = $("#boardDiv");
+
+    var $boardNavItemTemplate = $("#boardNavItemTemplate");
+
+    function getBoard(board){
+        if (board in $boards){
+            return $boards[board];
+        } else {
+            $boards[board] ={
+                left: $columnLeftTemplate.clone().attr('id', 'columnLeft_' + board).appendTo($boardDiv),
+                right : $columnRightTemplate.clone().attr('id', 'columnRight_' + board).appendTo($boardDiv),
+                objects : []
+            };
+            var nav = $boardNavItemTemplate.clone();
+            nav.attr('id', 'boardNavItem_' + board);
+            nav.appendTo($boardNavItemTemplate.parent());
+            nav.find('.boardName').html(board);
+            nav.find('.nav-link').on('click', function(){ toggleBoard(board); });
+            nav.show();
+
+            $('.boardNavDroppable').droppable({
+                accept: ".objectCard",
+                tolerance: "pointer",
+                classes: {
+                    "ui-droppable-active": "alert-warning",
+                    "ui-droppable-hover": "alert-danger",
+                },
+                drop: function (event, ui){
+                    var moveTo = $(event.target).find('.boardName').html();
+                    moveCardToBoard(ui.draggable, moveTo);
+                }
+            });
+
+            setSortable();
+            return $boards[board];
+        }
+    }
+
+    function moveCardToBoard(card, board){
+        var id = card.attr("id").substring("object_".length);
+        console.log("move " + id + " to " + board);
+        var old_board = $boards[$objects[id].board];
+        old_board.objects.splice(old_board.objects.indexOf($objects[id]));
+        card.remove();
+
+        var new_card = card.clone();
+
+        $objects[id] = {
+            board: board,
+            card: new_card,
+            status: new_card.find(".objectStatusIcon"),
+            title: new_card.find(".objectTitle"),
+            content: new_card.find(".objectContent"),
+            need_init: true
+        };
+
+        $objects[id].board = board;
+        var new_board = $boards[board];
+        new_board.objects.push($objects[id]);
+
+        if (new_board.left.children().length === 0){
+            new_card.appendTo(new_board.left);
+        } else {
+            new_card.insertBefore(new_board.left.children().first());
+        }
+
+        new_card.attr("style", "");
+        setSortable();
+    }
+
+    function toggleBoard(board){
+        $boardNavItemTemplate.parent().find('.nav-link').removeClass('active');
+        $("#boardNavItem_" + board).find('.nav-link').addClass('active');
+        for (let key in $boards){
+            if (key === board) {
+                $boards[key].left.show();
+                $boards[key].right.show();
+            } else {
+                $boards[key].left.hide();
+                $boards[key].right.hide();
+            }
+        }
+    }
 
     function updateObject(json){
-        var on_create = false;
 
         if (!(json.id in $objects)) {
-            on_create = true;
             console.log("create new object " + json.id);
             var object = $objectTemplateDiv.clone();
             object.attr("id", "object_" + json.id);
             $objects[json.id] = {
+                board: json.board,
                 card: object,
                 status: object.find(".objectStatusIcon"),
                 title: object.find(".objectTitle"),
-                content: object.find(".objectContent")
+                content: object.find(".objectContent"),
+                need_init: true
             };
 
-            object.insertBefore($columnLeft.children().first());
-
+            var board = getBoard(json.board);
+            if (board.left.children().length === 0){
+                object.appendTo(board.left);
+            } else {
+                object.insertBefore(board.left.children().first());
+            }
+            board.objects.push($objects[json.id]);
             $objects[json.id].status.addClass("text-success").addClass("blinking").addClass("mdi-play");
             $objects[json.id].card.addClass("objectActive");
             var close_action = object.find(".objectActionClose");
             close_action.on('click', function (){ socket.emit('unsubscribe', { obj_id: json.id, client_id: client_id }) });
-            setSortable();
+
+            toggleBoard(json.board);
         }
         if (json.type === 'text'){
-            if (on_create){ initTextObject(json); }
+            if ($objects[json.id].need_init){ initTextObject(json); $objects[json.id].need_init = false; }
             updateTextObject(json);
         }else if (json.type === 'image'){
-            if (on_create){ initImageObject(json); }
+            if ($objects[json.id].need_init){ initImageObject(json); $objects[json.id].need_init = false; }
             updateImageObject(json);
         }
 
@@ -265,6 +351,7 @@
 
     function initImageObject(json){
         var img_id = "object_img_" + json.id;
+        $objects[json.id].content.empty();
         var img = $(`<img id="${img_id}" src="data:image/jpeg;base64,${json.data}" />`);
         img.css("max-width", "100%");
         img.appendTo($objects[json.id].content);

@@ -8,14 +8,15 @@ from PIL import Image
 class BaseObject:
     type = "base"
 
-    def __init__(self, name):
+    def __init__(self, name, board):
         self.name = name
+        self.board = board
         self.version = 0
         self.last_active = time.time()
 
     @staticmethod
-    def init(name):
-        return BaseObject(name)
+    def init(name, board):
+        return BaseObject(name, board)
 
     def update(self, metadata, data):
         self.version += 1
@@ -28,15 +29,15 @@ class BaseObject:
 class TextObject(BaseObject):
     type = "text"
 
-    def __init__(self, name):
-        super().__init__(name)
+    def __init__(self, name, board):
+        super().__init__(name, board)
         self.text = ""
         self.version = 0
         self.rotate = True
 
     @staticmethod
-    def init(name):
-        return TextObject(name)
+    def init(name, board):
+        return TextObject(name, board)
 
     def update(self, metadata, text_data):
         self.version += 1
@@ -63,13 +64,13 @@ class ImageObject(BaseObject):
 
     IMAGE_MAX_SIZE = (650, 650)
 
-    def __init__(self, name):
-        super().__init__(name)
+    def __init__(self, name, board):
+        super().__init__(name, board)
         self.image = None
 
     @staticmethod
-    def init(name):
-        return ImageObject(name)
+    def init(name, board):
+        return ImageObject(name, board)
 
     def update(self, metadata, image):
         self.version += 1

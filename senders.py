@@ -9,9 +9,10 @@ if TYPE_CHECKING:
     import matplotlib.figure
 
 class BaseSender:
-    def __init__(self, name, server_host="localhost", server_port=2333):
+    def __init__(self, name, board="", server_host="localhost", server_port=2333):
         self.type = 'base'
         self.name = name
+        self.board = board if board else "Default"
         self.id =  "%s%f" % (name, time.time())
         self.recv_server_host = server_host
         self.recv_server_port = server_port
@@ -46,6 +47,7 @@ class BaseSender:
         metadata['Type'] = self.type
         metadata['Id'] = self.id
         metadata['Name'] = self.name
+        metadata['Board'] = self.board
         metadata['Length'] = len(data)
 
         metadata_str = ""
@@ -78,8 +80,8 @@ class BaseSender:
 
 
 class TextSender(BaseSender):
-    def __init__(self, name, rotate=True, server_host="localhost", server_port=2333):
-        super().__init__(name, server_host, server_port)
+    def __init__(self, name, board="", rotate=True, server_host="localhost", server_port=2333):
+        super().__init__(name, board, server_host, server_port)
         self.type = "text"
         if rotate:
             self.metadata['rotate'] = True
@@ -91,8 +93,8 @@ class TextSender(BaseSender):
 
 
 class ImageSender(BaseSender):
-    def __init__(self, name, server_host="localhost", server_port=2333):
-        super().__init__(name, server_host, server_port)
+    def __init__(self, name, board="", server_host="localhost", server_port=2333):
+        super().__init__(name, board, server_host, server_port)
         self.type = "image"
 
     def send(self, image):
@@ -100,10 +102,10 @@ class ImageSender(BaseSender):
 
 
 class PlotSender(ImageSender):
-    def __init__(self, name, server_host="localhost", server_port=2333):
-        super().__init__(name, server_host, server_port)
+    def __init__(self, name, board="", server_host="localhost", server_port=2333):
+        super().__init__(name, board, server_host, server_port)
 
     def send(self, fig: 'matplotlib.figure.Figure'):
         image_buffer = io.BytesIO()
-        fig.savefig(image_buffer, dpi=100, quality=95, format="jpg")
+        fig.savefig(image_buffer, dpi=120, format="jpg")
         self._send_with_metadata(self.metadata, image_buffer.getvalue())
