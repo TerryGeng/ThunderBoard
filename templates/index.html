@@ -117,10 +117,11 @@
                     <!-- Left col -->
                     <section class="col-lg-7 connectedSortable" id="columnLeft">
                         <!-- Custom tabs-->
-                        <div class="card" id="objectTemplate" style="display: none;">
+                        <div class="card objectActivate" id="objectTemplate" style="display: none;">
                             <div class="card-header">
-                                <h3 class="card-title objectTitle">
-                                    Message
+                                <h3 class="card-title">
+                                    <span class="mdi mdi-play objectStatusIcon"></span>
+                                    <span class="objectTitle">Message</span>
                                 </h3>
                                 <div class="card-tools">
                                     <button type="button" class="btn btn-tool objectActionMinimize" data-card-widget="collapse">
@@ -189,8 +190,19 @@
         client_id = id;
     });
     socket.on('update', function (json) {
-        console.log(json);
         updateObject(json);
+    });
+    socket.on('discard', function (id) {
+        if (id in $objects) {
+            $objects[id].status.removeClass("text-success").removeClass("blinking").removeClass("mdi-play")
+                .addClass("text-danger").addClass("mdi-stop");
+            $objects[id].card.removeClass("objectActive");
+        }
+    });
+    socket.on('discard and close', function (id) {
+        if (id in $objects) {
+            $objects[id].card.find(".objectActionClose").click();
+        }
     });
 
     var $objects = {};
@@ -207,10 +219,17 @@
             object.attr("id", "object_" + json.id);
             $objects[json.id] = {
                 card: object,
+                status: object.find(".objectStatusIcon"),
                 title: object.find(".objectTitle"),
                 content: object.find(".objectContent")
             };
-            object.appendTo($columnLeft);
+
+            object.insertBefore($columnLeft.children().first());
+
+            $objects[json.id].status.addClass("text-success").addClass("blinking").addClass("mdi-play");
+            $objects[json.id].card.addClass("objectActive");
+            var close_action = object.find(".objectActionClose");
+            close_action.on('click', function (){ socket.emit('unsubscribe', { obj_id: json.id, client_id: client_id }) });
             setSortable();
         }
         if (json.type === 'text'){

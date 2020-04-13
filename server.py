@@ -6,7 +6,7 @@ import logging
 import time
 
 from flask import Flask, render_template
-from flask_socketio import SocketIO, emit, join_room, leave_room
+from flask_socketio import SocketIO, emit, join_room, leave_room, close_room
 
 import objects
 
@@ -57,6 +57,7 @@ class DashboardServer:
         return chunks.getbuffer()
 
     def maintain_connection(self, conn, addr):
+        id = None
         while True:
             try:
                 # get metadata length
@@ -71,12 +72,30 @@ class DashboardServer:
                         key, value = line.split("=", 1)
                         metadata[key] = value
 
+                id = metadata['Id']
+                if id in self.objects:
+                    self.objects[id].last_active = time.time()
+
+                if 'PING' in metadata:
+                    continue
+
                 type = metadata['Type']
                 name = metadata['Name']
-                id = metadata['Id']
                 length = int(metadata['Length'])
 
                 data = self.recv_chunk(conn, length)
+
+                if 'Discard' in metadata:
+                    if id in self.objects:
+                        logging.debug("Discard object %s" % id)
+                        del self.object_subscriptions[id]
+                        del self.objects[id]
+                        if 'Close' in metadata:
+                            self.socketio.emit("discard and close", id, room=id)
+                        else:
+                            self.socketio.emit("discard", id, room=id)
+                        self.socketio.close_room(id)
+                    return
 
                 if not id in self.objects:
                     self.objects[id] = self.object_create_handlers[type](name)
@@ -87,7 +106,17 @@ class DashboardServer:
                 self.send_update(id)
             except ConnectionError:
                 logging.debug(f"Lost connection with {addr[0]}:{addr[1]}")
+                if id:
+                    self.wait_check_alive(id)
                 return
+
+    def wait_check_alive(self, id):
+        time.sleep(5)
+        if time.time() - self.objects[id].last_active > 4:
+            logging.debug("Discard object %s" % id)
+            del self.object_subscriptions[id]
+            del self.objects[id]
+            self.socketio.emit("discard", id, room=id)
 
     def recv_loop(self):
         self.recv_socket.listen()
@@ -147,10 +176,15 @@ class DashboardServer:
                 join_room(json['obj_id'])
                 self.send_update(json['obj_id'])
 
+        @socketio.on('unsubscribe')
+        def unsubscribe(json):
+            if json['obj_id'] in self.objects:
+                self.object_subscriptions[json['obj_id']].remove(json['client_id'])
+                leave_room(json['obj_id'])
+
         @socketio.on('leave')
         def leave(id):
             del self.clients[id]
-
 
 
 if __name__ == '__main__':

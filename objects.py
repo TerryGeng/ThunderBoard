@@ -1,6 +1,7 @@
 import io
 import base64
 import logging
+import time
 
 from PIL import Image
 
@@ -10,6 +11,7 @@ class BaseObject:
     def __init__(self, name):
         self.name = name
         self.version = 0
+        self.last_active = time.time()
 
     @staticmethod
     def init(name):
