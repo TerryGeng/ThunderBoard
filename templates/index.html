@@ -77,7 +77,9 @@
                             <li class="nav-item boardNavItem" id="boardNavItemTemplate" style="display: none">
                                 <a href="javascript:;" class="nav-link boardNavDroppable">
                                     <span class="nav-icon mdi mdi-speedometer"></span>
-                                    <p class="boardName">Default </p> <span class="mdi mdi-window-close right boardClose"></span>
+                                    <p class="boardName">Default</p>
+                                    <span class="badge badge-warning boardUnread" style="display: none"></span>
+                                    <span class="mdi mdi-window-close right boardClose"></span>
                                 </a>
                             </li>
                         </ul>
@@ -203,6 +205,7 @@
     var $objects = {};
     var $objectTemplateDiv = $("#objectTemplate");
     var $boards = {};
+    var $activeBoard = "";
     var $columnLeftTemplate = $("#columnLeftTemplate");
     var $columnRightTemplate = $("#columnRightTemplate");
     var $boardDiv = $("#boardDiv");
@@ -213,12 +216,14 @@
         if (board in $boards){
             return $boards[board];
         } else {
+            var nav = $boardNavItemTemplate.clone();
             $boards[board] = {
                 left: $columnLeftTemplate.clone().attr('id', 'columnLeft_' + board).appendTo($boardDiv),
                 right : $columnRightTemplate.clone().attr('id', 'columnRight_' + board).appendTo($boardDiv),
-                objects : []
+                unreadBadge: nav.find('.boardUnread'),
+                unreadCount: 0,
+                objects: []
             };
-            var nav = $boardNavItemTemplate.clone();
             nav.attr('id', 'boardNavItem_' + board);
             nav.appendTo($boardNavItemTemplate.parent());
             nav.find('.boardName').html(board);
@@ -270,7 +275,7 @@
             status: new_card.find(".objectStatusIcon"),
             title: new_card.find(".objectTitle"),
             content: new_card.find(".objectContent"),
-            need_init: true
+            needInit: true
         };
 
         $objects[id].board = board;
@@ -288,12 +293,15 @@
     }
 
     function toggleBoard(board){
+        $activeBoard = board;
         $boardNavItemTemplate.parent().find('.nav-link').removeClass('active');
         $("#boardNavItem_" + board).find('.nav-link').addClass('active');
         for (let key in $boards){
             if (key === board) {
                 $boards[key].left.show();
                 $boards[key].right.show();
+                $boards[key].unreadBadge.hide();
+                $boards[key].unreadCount = 0;
             } else {
                 $boards[key].left.hide();
                 $boards[key].right.hide();
@@ -312,7 +320,7 @@
                 status: object.find(".objectStatusIcon"),
                 title: object.find(".objectTitle"),
                 content: object.find(".objectContent"),
-                need_init: true
+                needInit: true
             };
 
             var board = getBoard(json.board);
@@ -333,11 +341,16 @@
             toggleBoard(json.board);
         }
         if (json.type === 'text'){
-            if ($objects[json.id].need_init){ initTextObject(json); $objects[json.id].need_init = false; }
+            if ($objects[json.id].needInit){ initTextObject(json); $objects[json.id].needInit = false; }
             updateTextObject(json);
         }else if (json.type === 'image'){
-            if ($objects[json.id].need_init){ initImageObject(json); $objects[json.id].need_init = false; }
+            if ($objects[json.id].needInit){ initImageObject(json); $objects[json.id].needInit = false; }
             updateImageObject(json);
+        }
+
+        if ($objects[json.id].board !== $activeBoard){
+            $boards[$objects[json.id].board].unreadCount += 1;
+            $boards[$objects[json.id].board].unreadBadge.html($boards[$objects[json.id].board].unreadCount).show();
         }
 
 
