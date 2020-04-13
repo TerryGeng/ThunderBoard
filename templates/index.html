@@ -77,7 +77,7 @@
                             <li class="nav-item boardNavItem" id="boardNavItemTemplate" style="display: none">
                                 <a href="javascript:;" class="nav-link boardNavDroppable">
                                     <span class="nav-icon mdi mdi-speedometer"></span>
-                                    <p class="boardName">Default</p>
+                                    <p class="boardName">Default </p> <span class="mdi mdi-window-close right boardClose"></span>
                                 </a>
                             </li>
                         </ul>
@@ -213,7 +213,7 @@
         if (board in $boards){
             return $boards[board];
         } else {
-            $boards[board] ={
+            $boards[board] = {
                 left: $columnLeftTemplate.clone().attr('id', 'columnLeft_' + board).appendTo($boardDiv),
                 right : $columnRightTemplate.clone().attr('id', 'columnRight_' + board).appendTo($boardDiv),
                 objects : []
@@ -223,6 +223,7 @@
             nav.appendTo($boardNavItemTemplate.parent());
             nav.find('.boardName').html(board);
             nav.find('.nav-link').on('click', function(){ toggleBoard(board); });
+            nav.find('.boardClose').on('click', function (){ closeBoard(board) });
             nav.show();
 
             $('.boardNavDroppable').droppable({
@@ -243,11 +244,22 @@
         }
     }
 
+    function closeBoard(board){
+        $("#boardNavItem_" + board).fadeOut();
+        $boards[board].left.remove();
+        $boards[board].right.remove();
+        for (let index in $boards[board].objects){
+            socket.emit('unsubscribe', { obj_id: $boards[board].objects[index], client_id: client_id  });
+            delete $objects[$boards[board].objects[index]];
+        }
+        delete $boards[board];
+    }
+
     function moveCardToBoard(card, board){
         var id = card.attr("id").substring("object_".length);
         console.log("move " + id + " to " + board);
         var old_board = $boards[$objects[id].board];
-        old_board.objects.splice(old_board.objects.indexOf($objects[id]));
+        old_board.objects.splice(old_board.objects.indexOf(id));
         card.remove();
 
         var new_card = card.clone();
@@ -263,7 +275,7 @@
 
         $objects[id].board = board;
         var new_board = $boards[board];
-        new_board.objects.push($objects[id]);
+        new_board.objects.push(id);
 
         if (new_board.left.children().length === 0){
             new_card.appendTo(new_board.left);
@@ -290,7 +302,6 @@
     }
 
     function updateObject(json){
-
         if (!(json.id in $objects)) {
             console.log("create new object " + json.id);
             var object = $objectTemplateDiv.clone();
@@ -310,11 +321,14 @@
             } else {
                 object.insertBefore(board.left.children().first());
             }
-            board.objects.push($objects[json.id]);
+            board.objects.push(json.id);
             $objects[json.id].status.addClass("text-success").addClass("blinking").addClass("mdi-play");
             $objects[json.id].card.addClass("objectActive");
             var close_action = object.find(".objectActionClose");
-            close_action.on('click', function (){ socket.emit('unsubscribe', { obj_id: json.id, client_id: client_id }) });
+            close_action.on('click', function (){
+                socket.emit('unsubscribe', { obj_id: json.id, client_id: client_id });
+                delete $objects[json.id];
+            });
 
             toggleBoard(json.board);
         }
