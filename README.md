@@ -36,26 +36,33 @@ import time
 import matplotlib.pyplot as plt
 import numpy as np
 
-import senders
+import senders        # import senders
 
 text_sender = senders.TextSender("Test Text", rotate=False)
+rotated_text_sender = senders.TextSender("Test Rotated Text", rotate=True)
 plot_sender = senders.PlotSender("Test Plot")
 
 t = 0
 while True:
-    text_sender.send("Time %ds" % t)
-    
-    xs = np.linspace(t, t+10, 100)
-    ys = np.sin(xs)
-    fig = plt.figure()
-    plt.plot(xs, ys)
-    plt.title("Test Figure t=%ds" % t)
-    
-    plot_sender.send(fig)
+    try:
+        xs = np.linspace(t, t+10, 100)
+        ys = np.sin(xs)
+        text_sender.send("Time %ds" % t)         # push data to the server, 127.0.0.1:2333 by default
+        rotated_text_sender.send("Rotated log at %ds" % t)
+        fig = plt.figure()
+        plt.plot(xs, ys)
+        plt.title("Test Figure t=%ds" % t)
+        plot_sender.send(fig)                    # worry-free matplotlib support
 
-    plt.close()
+        plt.close()
 
-    time.sleep(1)
-    t += 1
+        time.sleep(1)
+        t += 1
+        
+    except KeyboardInterrupt:
+        text_sender.close_and_discard()         # remove objects from the dashboard when exiting
+        plot_sender.close_and_discard()
+        rotated_text_sender.close_and_discard()
+        exit()
 
 ```
