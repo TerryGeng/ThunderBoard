@@ -1,6 +1,9 @@
 venv/
-static/node_modules/
+thunder_board/static/node_modules/
 .idea/
 .DS_Store
-static/package-lock.json
+thunder_board/static/package-lock.json
 __pycache__/
+build
+dist
+*.egg-info

@@ -6,9 +6,10 @@ import logging
 import time
 
 from flask import Flask, render_template
-from flask_socketio import SocketIO, send, emit, join_room, leave_room, close_room
+from flask_socketio import SocketIO, emit, join_room, leave_room
 
-import objects
+from thunder_board import objects
+
 
 class DashboardServer:
     def __init__(self, recv_server_host = "0.0.0.0", recv_server_port = 2333, web_server_host = "0.0.0.0", web_server_port = 2334):
@@ -72,6 +73,9 @@ class DashboardServer:
                         key, value = line.split("=", 1)
                         metadata[key] = value
 
+
+                logging.debug(f"Packet received, metadata {metadata}")
+
                 id = metadata['Id']
                 if id in self.objects:
                     self.objects[id].last_active = time.time()
@@ -88,7 +92,7 @@ class DashboardServer:
 
                 if 'Discard' in metadata:
                     if id in self.objects:
-                        logging.debug("Discard object %s" % id)
+                        logging.info(f"Discard object {name} ({id})")
                         del self.object_subscriptions[id]
                         del self.objects[id]
                         if 'Close' in metadata:
@@ -99,6 +103,7 @@ class DashboardServer:
                     return
 
                 if not id in self.objects:
+                    logging.info("Create object %s" % id)
                     self.objects[id] = self.object_create_handlers[type](name, board)
                     self.object_subscriptions[id] = []
                     self.send_new_object_notification(id)
@@ -114,7 +119,7 @@ class DashboardServer:
     def wait_check_alive(self, id):
         time.sleep(5)
         if time.time() - self.objects[id].last_active > 4:
-            logging.debug("Discard object %s" % id)
+            logging.info(f"Discard object {self.objects[id].name} ({id})")
             del self.object_subscriptions[id]
             del self.objects[id]
             self.socketio.emit("discard", id, room=id)
@@ -196,16 +201,4 @@ class DashboardServer:
         def leave(id):
             del self.clients[id]
 
-
-if __name__ == '__main__':
-    logger = logging.getLogger()
-    logger.setLevel(logging.DEBUG)
-    formatter = logging.Formatter('[%(asctime)s %(levelname)s %(threadName)s] %(message)s', "%b %d %H:%M:%S")
-    handler = logging.StreamHandler()
-    handler.setFormatter(formatter)
-    logger.addHandler(handler)
-
-    server = DashboardServer()
-    objects.register_object_types(server)
-    server.serve()
 

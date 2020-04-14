@@ -15,8 +15,20 @@ Web-based real-time data display platform for experiment monitoring.
      
      - Manage your subscription at ease.
 
-## Dependecies
+## Installation
 
+### From the release
+
+Download `.whl` file from [release](https://github.com/TerryGeng/ThunderBoard/releases) page.
+
+Then run
+```
+pip install {the_whl_file_you_downloaded}
+```
+
+### From this repo
+
+If you don't want to use pip, please clone this repo first, then install all dependencies manually by
 ```
 pip install flask flask-socketio Pillow
 ```
@@ -24,8 +36,14 @@ pip install flask flask-socketio Pillow
 ## Usage
 
 1. Run the server
+
+After installation, start the server by simply run
 ```
-python3 server.py
+thunderboard
+```
+if you installed with `pip install`. If you'd like to run from this repo directly, do
+```
+python3 run_server.py
 ```
 
 It will listen at 0.0.0.0:2333 for data and serve a web server at http://127.0.0.1:2334.
@@ -36,7 +54,7 @@ import time
 import matplotlib.pyplot as plt
 import numpy as np
 
-import senders        # import senders
+from thunder_board import senders        # import senders
 
 text_sender = senders.TextSender("Test Text", rotate=False)
 rotated_text_sender = senders.TextSender("Test Rotated Text", rotate=True)
