@@ -1,7 +1,19 @@
 # ThunderBoard
 Web-based real-time data display platform for experiment monitoring.
 
-![image](https://user-images.githubusercontent.com/2306637/78978303-1e0b2800-7b4c-11ea-93ec-a30739e17e44.png)
+![Screenshot](https://user-images.githubusercontent.com/2306637/79185903-cbcb4f00-7e4a-11ea-9678-24737064f02d.png)
+
+## Features
+
+ - Based on socket connection over TCP/IP. Access and push data anywhere.
+ 
+ - Clean and easy interface. You just need to add one line (well, actually three) in your code to make it work.
+ 
+ - Beautiful dashboard. Powered by [Flask](https://palletsprojects.com/p/flask/), [Socket.IO](https://socket.io/) and [AdminLTE](https://adminlte.io/).
+ 
+     - Post data to multiple boards, and move objects between boards by drag-and-drop.
+     
+     - Manage your subscription at ease.
 
 ## Dependecies
 
