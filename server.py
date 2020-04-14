@@ -6,7 +6,7 @@ import logging
 import time
 
 from flask import Flask, render_template
-from flask_socketio import SocketIO, emit, join_room, leave_room, close_room
+from flask_socketio import SocketIO, send, emit, join_room, leave_room, close_room
 
 import objects
 
@@ -177,6 +177,14 @@ class DashboardServer:
                 self.object_subscriptions[json['obj_id']].append(json['client_id'])
                 join_room(json['obj_id'])
                 self.send_update(json['obj_id'])
+
+        @socketio.on('list')
+        def list(json):
+            obj_list = []
+            for id, obj in self.objects.items():
+                subscribed = True if json['client_id'] in self.object_subscriptions[id] else False
+                obj_list.append({'id': id, 'name': obj.name, 'board': obj.board, 'subscribed': subscribed})
+            emit("list", obj_list)
 
         @socketio.on('unsubscribe')
         def unsubscribe(json):

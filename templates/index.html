@@ -32,18 +32,15 @@
             <!-- Notifications Dropdown Menu -->
             <li class="nav-item dropdown">
                 <a class="nav-link" data-toggle="dropdown" href="#">
-                    <span class="mdi mdi-message-alert-outline"></span>
-                    <span class="badge badge-warning navbar-badge">15</span>
+                    <span class="mdi mdi-cog"></span>
+                    <!-- <span class="badge badge-warning navbar-badge">15</span> -->
                 </a>
                 <div class="dropdown-menu dropdown-menu-lg dropdown-menu-right">
-                    <span class="dropdown-item dropdown-header">15 Notifications</span>
+                    <span class="dropdown-item dropdown-header">Settings</span>
                     <div class="dropdown-divider"></div>
-                    <a href="#" class="dropdown-item">
-                        <span class="mdi mdi-message"></span> 4 new messages
-                        <span class="float-right text-muted text-sm">3 mins</span>
+                    <a href="javascript:;" class="dropdown-item" id="openEditSubscription">
+                        <span class="mdi mdi-rss"></span> Subscriptions
                     </a>
-                    <div class="dropdown-divider"></div>
-                    <a href="#" class="dropdown-item dropdown-footer">See All Notifications</a>
                 </div>
             </li>
         </ul>
@@ -76,7 +73,7 @@
                         <ul class="nav nav-treeview">
                             <li class="nav-item boardNavItem" id="boardNavItemTemplate" style="display: none">
                                 <a href="javascript:;" class="nav-link boardNavDroppable">
-                                    <span class="nav-icon mdi mdi-speedometer"></span>
+                                    <span class="nav-icon mdi mdi-gauge"></span>
                                     <p class="boardName">Default</p>
                                     <span class="badge badge-warning boardUnread" style="display: none"></span>
                                     <span class="mdi mdi-window-close right boardClose"></span>
@@ -103,7 +100,7 @@
                     <div class="col-sm-6">
                         <ol class="breadcrumb float-sm-right">
                             <li class="breadcrumb-item"><a href="#">Home</a></li>
-                            <li class="breadcrumb-item active">Dashboard v1</li>
+                            <li class="breadcrumb-item active">Dashboard</li>
                         </ol>
                     </div><!-- /.col -->
                 </div><!-- /.row -->
@@ -160,6 +157,35 @@
         <!-- Control sidebar content goes here -->
     </aside>
     <!-- /.control-sidebar -->
+
+
+    <!-- Edit subscription modal -->
+    <div class="modal fade" id="editSubscriptionModal" tabindex="-1" role="dialog" aria-hidden="true">
+        <div class="modal-dialog" role="document">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Edit Subscription</h5>
+                    <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                        <span aria-hidden="true">&times;</span>
+                    </button>
+                </div>
+                <div class="modal-body">
+                    <div id="editSubscriptionCheckGroup" class="form-group">
+                    </div>
+                    <div class="form-check editSubscriptionCheckDiv" style="display: none">
+                        <input type="checkbox" class="form-check-input" checked="">
+                        <label class="form-check-label">Default</label>
+                    </div>
+
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
+                    <button id="editSubscriptionSubmit" type="button" class="btn btn-success" data-dismiss="modal" onclick="editSubscriptionSubmit()">Edit!</button>
+                </div>
+            </div>
+        </div>
+    </div>
+    <!-- /.modal -->
 </div>
 <!-- ./wrapper -->
 
@@ -209,6 +235,7 @@
     var $columnLeftTemplate = $("#columnLeftTemplate");
     var $columnRightTemplate = $("#columnRightTemplate");
     var $boardDiv = $("#boardDiv");
+    var $unsubscribed = [];
 
     var $boardNavItemTemplate = $("#boardNavItemTemplate");
 
@@ -277,6 +304,12 @@
             content: new_card.find(".objectContent"),
             needInit: true
         };
+        var close_action = new_card.find(".objectActionClose");
+        close_action.on('click', function (){
+            $unsubscribed.push(id);
+            socket.emit('unsubscribe', { obj_id: id, client_id: client_id });
+            delete $objects[id];
+        });
 
         $objects[id].board = board;
         var new_board = $boards[board];
@@ -310,6 +343,9 @@
     }
 
     function updateObject(json){
+        if ($unsubscribed.indexOf(json.id) >= 0){
+            return;
+        }
         if (!(json.id in $objects)) {
             console.log("create new object " + json.id);
             var object = $objectTemplateDiv.clone();
@@ -334,6 +370,7 @@
             $objects[json.id].card.addClass("objectActive");
             var close_action = object.find(".objectActionClose");
             close_action.on('click', function (){
+                $unsubscribed.push(json.id);
                 socket.emit('unsubscribe', { obj_id: json.id, client_id: client_id });
                 delete $objects[json.id];
             });
@@ -352,7 +389,6 @@
             $boards[$objects[json.id].board].unreadCount += 1;
             $boards[$objects[json.id].board].unreadBadge.html($boards[$objects[json.id].board].unreadCount).show();
         }
-
 
         $objects[json.id].card.show();
     }
@@ -405,6 +441,50 @@
             zIndex: 999999
         });
         $('.connectedSortable .card-header, .connectedSortable .nav-tabs-custom').css('cursor', 'move');
+    }
+
+    var $editSubscriptionModal = $("#editSubscriptionModal");
+    var $editSubscriptionCheckGroup = $("#editSubscriptionCheckGroup");
+    var $editSubscriptionCheckTemplate = $(".editSubscriptionCheckDiv");
+
+    $("#openEditSubscription").on("click", function(){
+        socket.emit('list', {client_id: client_id});
+        socket.on('list', function(obj_list){
+            socket.off('list');
+            editSubscriptionModalShow(obj_list);
+        });
+    });
+
+    function editSubscriptionModalShow(obj_list){
+        $editSubscriptionCheckGroup.empty();
+        obj_list.forEach( function(_obj){
+            var obj_check = $editSubscriptionCheckTemplate.clone();
+            obj_check.find(".form-check-input").attr("id", "check_" + _obj.id).prop("checked", _obj.subscribed);
+            obj_check.find(".form-check-label").html(_obj.board + " / " + _obj.name).attr("for", "check_" + _obj.id);
+            obj_check.appendTo($editSubscriptionCheckGroup);
+            obj_check.show();
+        });
+
+        $editSubscriptionModal.modal('show');
+    }
+
+    function editSubscriptionSubmit(){
+        $editSubscriptionCheckGroup.find(".form-check-input").each(function (){
+            var check = $(this);
+            var id = check.attr("id").substring("check_".length);
+            if (check.prop("checked")) {
+                if (!(id in $objects)) {
+                    socket.emit('subscribe', {obj_id: id, client_id: client_id});
+                    if ($unsubscribed.indexOf(id) >= 0){
+                        $unsubscribed.splice($unsubscribed.indexOf(id));
+                    }
+                }
+            } else {
+                if (id in $objects){
+                    $objects[id].card.find(".objectActionClose").click();
+                }
+            }
+        });
     }
 
 </script>
