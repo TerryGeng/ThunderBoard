@@ -4,9 +4,6 @@ import struct
 import time
 import threading
 
-from typing import Type, TYPE_CHECKING
-if TYPE_CHECKING:
-    import matplotlib.figure
 
 class BaseSender:
     def __init__(self, name, board="", id="", server_host="localhost", server_port=2333):
@@ -107,7 +104,7 @@ class PlotSender(ImageSender):
     def __init__(self, name, board="", id="", server_host="localhost", server_port=2333):
         super().__init__(name, board, id, server_host, server_port)
 
-    def send(self, fig: 'matplotlib.figure.Figure'):
+    def send(self, fig): # fig: 'matplotlib.figure.Figure'
         image_buffer = io.BytesIO()
         fig.savefig(image_buffer, dpi=120, format="jpg")
         self._send_with_metadata(self.metadata, image_buffer.getvalue())

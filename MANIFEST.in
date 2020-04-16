@@ -1,0 +1,2 @@
+recursive-include thunder_board/static *
+recursive-include thunder_board/templates *

@@ -18,7 +18,7 @@ requirements = parse_requirements(
 
 setuptools.setup(
     name='thunder-board-terry-geng',
-    version='0.1a1',
+    version='0.1a2',
     url='https://github.com/TerryGeng/ThunderBoard',
     license='MIT License',
     author='Terry Geng',
@@ -39,4 +39,5 @@ setuptools.setup(
             'thunderboard=thunder_board.app:serve'
         ]
     },
+    include_package_data=True,
 )
