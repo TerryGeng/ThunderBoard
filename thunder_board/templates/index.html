@@ -215,14 +215,15 @@
     socket.on('update', function (json) {
         updateObject(json);
     });
-    socket.on('discard', function (id) {
+    socket.on('inactive', function (id) {
         if (id in $objects) {
+            $objects[id].active = false;
             $objects[id].status.removeClass("text-success").removeClass("blinking").removeClass("mdi-play")
                 .addClass("text-danger").addClass("mdi-stop");
             $objects[id].card.removeClass("objectActive");
         }
     });
-    socket.on('discard and close', function (id) {
+    socket.on('close', function (id) {
         if (id in $objects) {
             $objects[id].card.find(".objectActionClose").click();
         }
@@ -296,13 +297,14 @@
 
         var new_card = card.clone();
 
-        $objects[id] = {
+        $objects[id] = { // TODO: move this into a function
             board: board,
             card: new_card,
             status: new_card.find(".objectStatusIcon"),
             title: new_card.find(".objectTitle"),
             content: new_card.find(".objectContent"),
-            needInit: true
+            needInit: true,
+            active: true
         };
         var close_action = new_card.find(".objectActionClose");
         close_action.on('click', function (){
@@ -356,7 +358,8 @@
                 status: object.find(".objectStatusIcon"),
                 title: object.find(".objectTitle"),
                 content: object.find(".objectContent"),
-                needInit: true
+                needInit: true,
+                active: false
             };
 
             var board = getBoard(json.board);
@@ -366,8 +369,6 @@
                 object.insertBefore(board.left.children().first());
             }
             board.objects.push(json.id);
-            $objects[json.id].status.addClass("text-success").addClass("blinking").addClass("mdi-play");
-            $objects[json.id].card.addClass("objectActive");
             var close_action = object.find(".objectActionClose");
             close_action.on('click', function (){
                 $unsubscribed.push(json.id);
@@ -377,6 +378,14 @@
 
             toggleBoard(json.board);
         }
+        if (!$objects[json.id].active){
+            $objects[json.id].active = true;
+
+            $objects[json.id].status.removeClass("text-danger").removeClass("mdi-stop");
+            $objects[json.id].status.addClass("text-success").addClass("blinking").addClass("mdi-play");
+            $objects[json.id].card.addClass("objectActive");
+        }
+
         if (json.type === 'text'){
             if ($objects[json.id].needInit){ initTextObject(json); $objects[json.id].needInit = false; }
             updateTextObject(json);

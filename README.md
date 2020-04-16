@@ -56,31 +56,32 @@ import numpy as np
 
 from thunder_board import senders        # import senders
 
-text_sender = senders.TextSender("Test Text", rotate=False)
+text_sender = senders.TextSender("Status Bar", rotate=False, id="status")
 rotated_text_sender = senders.TextSender("Test Rotated Text", rotate=True)
 plot_sender = senders.PlotSender("Test Plot")
 
 t = 0
 while True:
     try:
+        text_sender.send("Experiment Status: <strong>Time %ds</strong>" % t)
+        rotated_text_sender.send("Rotated log at %ds" % t)  # push data to server
+
         xs = np.linspace(t, t+10, 100)
         ys = np.sin(xs)
-        text_sender.send("Time %ds" % t)         # push data to the server, 127.0.0.1:2333 by default
-        rotated_text_sender.send("Rotated log at %ds" % t)
         fig = plt.figure()
         plt.plot(xs, ys)
         plt.title("Test Figure t=%ds" % t)
-        plot_sender.send(fig)                    # worry-free matplotlib support
+        plot_sender.send(fig)                               # worry-free matplotlib support
 
         plt.close()
 
         time.sleep(1)
         t += 1
-        
     except KeyboardInterrupt:
-        text_sender.close_and_discard()         # remove objects from the dashboard when exiting
-        plot_sender.close_and_discard()
+        text_sender.send("Experiment Status: Inactive")
+        text_sender.close()
+
+        plot_sender.close_and_discard()                       # these two objects will be removed from the dashboard
         rotated_text_sender.close_and_discard()
         exit()
-
 ```

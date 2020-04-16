@@ -90,16 +90,16 @@ class DashboardServer:
 
                 data = self.recv_chunk(conn, length)
 
-                if 'Discard' in metadata:
+                if 'Inactive' in metadata:
                     if id in self.objects:
-                        logging.info(f"Discard object {name} ({id})")
-                        del self.object_subscriptions[id]
-                        del self.objects[id]
-                        if 'Close' in metadata:
-                            self.socketio.emit("discard and close", id, room=id)
+                        logging.info(f"Set Inactive flag to object {name} ({id})")
+                        if 'Discard' in metadata:
+                            del self.object_subscriptions[id]
+                            del self.objects[id]
+                            self.socketio.emit("close", id, room=id)
+                            self.socketio.close_room(id)
                         else:
-                            self.socketio.emit("discard", id, room=id)
-                        self.socketio.close_room(id)
+                            self.socketio.emit("inactive", id, room=id)
                     return
 
                 if not id in self.objects:
@@ -119,10 +119,8 @@ class DashboardServer:
     def wait_check_alive(self, id):
         time.sleep(5)
         if time.time() - self.objects[id].last_active > 4:
-            logging.info(f"Discard object {self.objects[id].name} ({id})")
-            del self.object_subscriptions[id]
-            del self.objects[id]
-            self.socketio.emit("discard", id, room=id)
+            logging.info(f"PING not received. Set Inactive flag to object {self.objects[id].name} ({id})")
+            self.socketio.emit("inactive", id, room=id)
 
     def recv_loop(self):
         self.recv_socket.listen()
