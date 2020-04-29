@@ -2,17 +2,22 @@ import io
 import base64
 import logging
 import time
+import json
+import threading
 
 from PIL import Image
 
 class BaseObject:
     type = "base"
 
-    def __init__(self, name, board):
+    def __init__(self, name, board, send_enable=False):
         self.name = name
         self.board = board
         self.version = 0
         self.last_active = time.time()
+        self.active = True
+        self.send_enable = send_enable
+        self.socket = None
 
     @staticmethod
     def init(name, board):
@@ -89,6 +94,29 @@ class ImageObject(BaseObject):
         return dump_to
 
 
+class DialogObject(BaseObject):
+    type = 'dialog'
+
+    def __init__(self, name, board):
+        super().__init__(name, board, send_enable=True)
+        self.fields = []
+
+    @staticmethod
+    def init(name, board):
+        return DialogObject(name, board)
+
+    def update(self, metadata, data):
+        self.version += 1
+        self.fields = json.loads(data)
+
+    def dump_to(self, dump_to):
+        dump_to['fields'] = self.fields
+        return dump_to
+
+
+
+
 def register_object_types(server):
     server.object_create_handlers['text'] = TextObject.init
     server.object_create_handlers['image'] = ImageObject.init
+    server.object_create_handlers['dialog'] = DialogObject.init

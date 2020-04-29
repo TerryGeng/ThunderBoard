@@ -57,12 +57,28 @@ class DashboardServer:
 
         return chunks.getbuffer()
 
+    def send_chunk(self, _socket, data):
+        sent_len = 0
+        while sent_len < len(data):
+            chunk_len = _socket.send(memoryview(data)[sent_len:])
+            if chunk_len == 0:
+                raise ConnectionError("Socket connection broken")
+            else:
+                sent_len += chunk_len
+
     def maintain_connection(self, conn, addr):
         id = None
         while True:
             try:
                 # get metadata length
                 metadata_length, = struct.unpack("h", self.recv_chunk(conn, 2))
+
+                if id in self.objects:
+                    self.objects[id].last_active = time.time()
+                    self.objects[id].active = True
+
+                if not metadata_length: # PING message has length 0
+                    continue
 
                 # get metadata
                 metadata_str = self.recv_chunk(conn, metadata_length).tobytes().decode('utf-8')
@@ -77,12 +93,6 @@ class DashboardServer:
                 logging.debug(f"Packet received, metadata {metadata}")
 
                 id = metadata['Id']
-                if id in self.objects:
-                    self.objects[id].last_active = time.time()
-
-                if 'PING' in metadata:
-                    continue
-
                 type = metadata['Type']
                 name = metadata['Name']
                 board = metadata['Board']
@@ -92,6 +102,8 @@ class DashboardServer:
 
                 if 'Inactive' in metadata:
                     if id in self.objects:
+                        self.objects[id].active = False
+                        self.objects[id].socket = None
                         logging.info(f"Set Inactive flag to object {name} ({id})")
                         if 'Discard' in metadata:
                             del self.object_subscriptions[id]
@@ -105,6 +117,7 @@ class DashboardServer:
                 if not id in self.objects:
                     logging.info("Create object %s" % id)
                     self.objects[id] = self.object_create_handlers[type](name, board)
+                    self.objects[id].socket = conn
                     self.object_subscriptions[id] = []
                     self.send_new_object_notification(id)
 
@@ -119,6 +132,7 @@ class DashboardServer:
     def wait_check_alive(self, id):
         time.sleep(5)
         if time.time() - self.objects[id].last_active > 4:
+            self.objects[id].active = False
             logging.info(f"PING not received. Set Inactive flag to object {self.objects[id].name} ({id})")
             self.socketio.emit("inactive", id, room=id)
 
@@ -188,6 +202,31 @@ class DashboardServer:
                 subscribed = True if json['client_id'] in self.object_subscriptions[id] else False
                 obj_list.append({'id': id, 'name': obj.name, 'board': obj.board, 'subscribed': subscribed})
             emit("list", obj_list)
+
+        @socketio.on('send')
+        def send(json):
+            if json['obj_id'] in self.objects and self.objects[json['obj_id']].send_enable:
+                dict_str = ""
+                for key, value in json.items():
+                    dict_str += f"{key}={value}\n"
+
+                data = bytes(dict_str, 'utf-8')
+                data_len = struct.pack("h", len(data))
+
+                to_be_sent = data_len + data
+
+                self.send_chunk(self.objects[json['obj_id']].socket, to_be_sent)
+
+        @socketio.on('clean inactive')
+        def clean_inactive():
+            item_to_clean = []
+            for id, obj in self.objects.items():
+                if not obj.active:
+                    item_to_clean.append(id)
+
+            for id in item_to_clean:
+                del self.object_subscriptions[id]
+                del self.objects[id]
 
         @socketio.on('unsubscribe')
         def unsubscribe(json):
