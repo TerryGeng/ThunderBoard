@@ -38,6 +38,18 @@ var $unsubscribed = [];
 
 var $boardNavItemTemplate = $("#boardNavItemTemplate");
 
+function setActiveFlag(id, active=true){
+    if(active){
+        $objects[id].status.removeClass("text-danger").removeClass("mdi-stop");
+        $objects[id].status.addClass("text-success").addClass("blinking").addClass("mdi-play");
+        $objects[id].card.addClass("objectActive");
+    } else {
+        $objects[id].status.removeClass("text-success").removeClass("blinking").removeClass("mdi-play")
+            .addClass("text-danger").addClass("mdi-stop");
+        $objects[id].card.removeClass("objectActive");
+    }
+}
+
 function getBoard(board){
     if (board in $boards){
         return $boards[board];
@@ -164,12 +176,9 @@ function updateObject(json){
     $objects[json.id].json = json;
     $objects[json.id].title.html(json.name);
 
-    if (!$objects[json.id].active){
-        $objects[json.id].active = true;
-
-        $objects[json.id].status.removeClass("text-danger").removeClass("mdi-stop");
-        $objects[json.id].status.addClass("text-success").addClass("blinking").addClass("mdi-play");
-        $objects[json.id].card.addClass("objectActive");
+    if (!($objects[json.id].active === json.active)){
+        $objects[json.id].active = json.active;
+        setActiveFlag(json.id, json.active)
     }
 
     if (json.type === 'text'){
@@ -306,10 +315,26 @@ function initDialogObject(json){
 
         if (item.type === "label"){
             temp_clone = dialogLabelTemplate.clone();
-            var label_clone = temp_clone.find(".dialogLabel");
-            label_clone.attr("id", dialog_id + "_" + item.name);
-            label_clone.html(item.text);
-            $objects[json.id].controls[item.name] = {label: label_clone};
+            var label = temp_clone.find(".dialogLabel");
+            label.attr("id", dialog_id + "_" + item.name);
+            label.html(item.text);
+            $objects[json.id].controls[item.name] = {label: label};
+        } else if (item.type === "input") {
+            temp_clone = dialogInputTemplate.clone();
+            var label = temp_clone.find(".dialogLabel");
+            var input = temp_clone.find(".dialogInput");
+            label.attr("id", dialog_id + "_" + item.name + "_label");
+            label.html(item.text);
+            input.attr("id", dialog_id + "_" + item.name + "_input");
+            label.val(item.value);
+
+            $objects[json.id].controls[item.name] = {label: label, input: input };
+        } else if (item.type === "button") {
+            temp_clone = dialogButtonTemplate.clone();
+            var button = temp_clone.find(".dialogButton");
+            button.attr("id", dialog_id + "_" + item.name);
+            button.html(item.text);
+            $objects[json.id].controls[item.name] = {button: button};
         }
 
         if (item.group in $objects[json.id].groups){
@@ -331,6 +356,13 @@ function updateDialogObject(json){
 
         if (item.type === "label"){
             $objects[json.id].controls[item.name].label.html(item.text);
+        } else if (item.type === "input") {
+            $objects[json.id].controls[item.name].label.html(item.text);
+            $objects[json.id].controls[item.name].input.val(item.value);
+            $objects[json.id].controls[item.name].input.prop('disabled', !(item.enabled && json.active));
+        } else if (item.type === "button") {
+            $objects[json.id].controls[item.name].button.html(item.text);
+            $objects[json.id].controls[item.name].button.prop('disabled', !(item.enabled && json.active));
         }
     }
 }

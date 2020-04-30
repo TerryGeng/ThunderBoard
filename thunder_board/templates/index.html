@@ -118,7 +118,7 @@
                         <div class="card objectCard" id="objectTemplate" style="display: none;">
                             <div class="card-header">
                                 <h3 class="card-title">
-                                    <span class="mdi mdi-play objectStatusIcon"></span>
+                                    <span class="mdi mdi-stop text-danger objectStatusIcon"></span>
                                     <span class="objectTitle">Message</span>
                                 </h3>
                                 <div class="card-tools">
@@ -191,25 +191,30 @@
 
     <div style="display: none">
         <!-- TEXT LABEL TEMPLATE -->
-        <div class="form-group dialogLabelTemplate">
-            <span class="col-form-label dialogLabel"></span>
+        <div class="dialogLabelTemplate">
+            <div class="form-group row">
+                <div class="col dialogLabel"></div>
+            </div>
         </div>
 
         <!-- TEXT INPUT TEMPLATE -->
-        <div class="form-group dialogInputTemplate">
-            <label class="col-form-label dialogLabel"></label>
-            <input type="text" class="form-control-plaintext dialogInput">
+        <div class="dialogInputTemplate">
+            <div class="form-group form-inline">
+                <label class="col-form-label mr-3 dialogLabel"></label>
+                <input type="text" class="form-control dialogInput">
+            </div>
         </div>
 
         <!-- BUTTON TEMPLATE -->
-        <div class="form-group dialogButtonTemplate">
+        <div class="btn-group dialogButtonTemplate">
             <button class="btn btn-primary dialogButton"></button>
         </div>
 
         <!-- SLIDER TEMPLATE -->
-        <div class="form-group dialogSliderTemplate">
+        <div class="dialogSliderTemplate">
             <label class="col-form-label dialogLabel"></label>
             <input type="range" class="btn btn-primary dialogSlider">
+            <span class="dialogSliderValue"></span>
         </div>
     </div>
 </div>

@@ -73,10 +73,6 @@ class DashboardServer:
                 # get metadata length
                 metadata_length, = struct.unpack("h", self.recv_chunk(conn, 2))
 
-                if id in self.objects:
-                    self.objects[id].last_active = time.time()
-                    self.objects[id].active = True
-
                 if not metadata_length: # PING message has length 0
                     continue
 
@@ -100,6 +96,10 @@ class DashboardServer:
 
                 data = self.recv_chunk(conn, length)
 
+                if id in self.objects:
+                    self.objects[id].last_active = time.time()
+                    self.objects[id].active = True
+
                 if 'Inactive' in metadata:
                     if id in self.objects:
                         self.objects[id].active = False
@@ -110,8 +110,6 @@ class DashboardServer:
                             del self.objects[id]
                             self.socketio.emit("close", id, room=id)
                             self.socketio.close_room(id)
-                        else:
-                            self.socketio.emit("inactive", id, room=id)
                     return
 
                 if not id in self.objects:
@@ -134,7 +132,7 @@ class DashboardServer:
         if time.time() - self.objects[id].last_active > 4:
             self.objects[id].active = False
             logging.info(f"PING not received. Set Inactive flag to object {self.objects[id].name} ({id})")
-            self.socketio.emit("inactive", id, room=id)
+            self.send_update(id)
 
     def recv_loop(self):
         self.recv_socket.listen()
@@ -158,7 +156,8 @@ class DashboardServer:
                 'type': object.type,
                 'board': object.board,
                 'version': object.version,
-                'name': object.name
+                'name': object.name,
+                'active': object.active
             }
             object.dump_to(to_send)
             self.socketio.emit('update', to_send, room=object_id)

@@ -146,17 +146,32 @@ class DialogClient(BaseClient):
         self.type = "dialog"
         self.groups = {}
         self.groups['Default'] = []
+        self.groups_order = [ 'Default' ]
         self.fields = {}
 
     def add_group(self, name=""):
         if name not in self.groups:
             self.groups[name] = []
+            self.groups_order.append(name)
 
     def add_button(self, name="", text="", handler=None, control_group="Default", enabled=True):
-        pass
+        if not name or name in self.fields:
+            raise ValueError("Name can not be empty, or duplicated with other fields.")
+
+        self.groups[control_group].append(name)
+        self.fields[name] = { 'type': 'button',
+                              'text': text,
+                              'enabled': enabled }
 
     def add_input_box(self, name="", label_text="", handler=None, default_value="", control_group="Default", enabled=True):
-        pass
+        if not name or name in self.fields:
+            raise ValueError("Name can not be empty, or duplicated with other fields.")
+
+        self.groups[control_group].append(name)
+        self.fields[name] = { 'type': 'input',
+                              'text': label_text,
+                              'value': default_value,
+                              'enabled': enabled }
 
     def add_text_label(self, name="", text="", control_group="Default"):
         if not name or name in self.fields:
@@ -171,7 +186,8 @@ class DialogClient(BaseClient):
 
     def display(self):
         fields_to_send = []
-        for group, fields in self.groups.items():
+        for group in self.groups_order:
+            fields = self.groups[group]
             for field in fields:
                 fields_to_send.append(
                     {
