@@ -4,6 +4,7 @@ import struct
 import time
 import threading
 import json
+import logging
 
 
 class BaseClient:
@@ -66,6 +67,7 @@ class BaseClient:
                 self._send(struct.pack("h", 0))
             else:
                 self._establish()
+                self._send_with_metadata({'PING': 1}, b'')
 
     def _recv_chunk(self, _socket, length):
         received = 0
@@ -80,18 +82,28 @@ class BaseClient:
         return chunks.getbuffer()
 
     def recv_loop(self):
-        if not self.socket:
-            self._establish()
+        time.sleep(1)
+        while True:
+            if not self.socket:
+                self._establish()
 
-        data_length, = struct.unpack("h", self.recv_chunk(self.socket, 2))
-        data_str = self.recv_chunk(self.socket, data_length).tobytes().decode('utf-8')
+            data_length, = struct.unpack("h", self._recv_chunk(self.socket, 2))
+            data_str = self._recv_chunk(self.socket, data_length).tobytes().decode('utf-8')
 
-        self.message_handler(data_str)
+            logging.debug(f"Received message {data_str}")
 
-    def start_recv_loop(self):
+            data = {}
+            for line in data_str.split("\n"):
+                if line:
+                    key, value = line.split("=", 1)
+                    data[key] = value
+
+            self.message_handler(data)
+
+    def start_recv_thread(self):
         threading.Thread(name="Loop", target=self.recv_loop, daemon=True).start()
 
-    def message_handler(self, data_str):
+    def message_handler(self, data_dict):
         raise NotImplementedError
 
     def close(self):
@@ -148,6 +160,7 @@ class DialogClient(BaseClient):
         self.groups['Default'] = []
         self.groups_order = [ 'Default' ]
         self.fields = {}
+        self.handlers = {}
 
     def add_group(self, name=""):
         if name not in self.groups:
@@ -162,6 +175,10 @@ class DialogClient(BaseClient):
         self.fields[name] = { 'type': 'button',
                               'text': text,
                               'enabled': enabled }
+        if handler:
+            self.fields[name]['handle'] = 'on_click'
+            self.handlers[name + '@on_click'] = handler
+
 
     def add_input_box(self, name="", label_text="", handler=None, default_value="", control_group="Default", enabled=True):
         if not name or name in self.fields:
@@ -172,6 +189,9 @@ class DialogClient(BaseClient):
                               'text': label_text,
                               'value': default_value,
                               'enabled': enabled }
+        if handler:
+            self.fields[name]['handle'] = 'on_change'
+            self.handlers[name + '@on_change'] = handler
 
     def add_text_label(self, name="", text="", control_group="Default"):
         if not name or name in self.fields:
@@ -198,3 +218,10 @@ class DialogClient(BaseClient):
                 )
 
         self._send_with_metadata(self.metadata, bytes(json.dumps(fields_to_send), 'utf-8'))
+
+    def message_handler(self, data_dict):
+        event = data_dict['event']
+        args = data_dict['args']
+        logging.info(f"Event {event} emitted with args {args}")
+        if event in self.handlers:
+            self.handlers[event](args)

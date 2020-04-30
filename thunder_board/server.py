@@ -74,6 +74,10 @@ class DashboardServer:
                 metadata_length, = struct.unpack("h", self.recv_chunk(conn, 2))
 
                 if not metadata_length: # PING message has length 0
+                    if id in self.objects:
+                        self.objects[id].last_active = time.time()
+                        self.objects[id].active = True
+                        logging.debug(f"PING packet received for {id}")
                     continue
 
                 # get metadata
@@ -99,6 +103,11 @@ class DashboardServer:
                 if id in self.objects:
                     self.objects[id].last_active = time.time()
                     self.objects[id].active = True
+                    self.objects[id].socket = conn
+
+                if 'PING' in metadata:
+                    logging.debug(f"PING packet received for {id}")
+                    continue
 
                 if 'Inactive' in metadata:
                     if id in self.objects:
@@ -204,16 +213,19 @@ class DashboardServer:
 
         @socketio.on('send')
         def send(json):
+            logging.info(f"Receive message from browser client, refer to {json['obj_id']}")
             if json['obj_id'] in self.objects and self.objects[json['obj_id']].send_enable:
                 dict_str = ""
                 for key, value in json.items():
-                    dict_str += f"{key}={value}\n"
+                    if key != 'obj_id':
+                        dict_str += f"{key}={value}\n"
 
                 data = bytes(dict_str, 'utf-8')
                 data_len = struct.pack("h", len(data))
 
                 to_be_sent = data_len + data
 
+                logging.debug(f"Send message to {json['obj_id']}: {dict_str}")
                 self.send_chunk(self.objects[json['obj_id']].socket, to_be_sent)
 
         @socketio.on('clean inactive')

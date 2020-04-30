@@ -13,14 +13,6 @@ socket.on('id assigned', function (id) {
 socket.on('update', function (json) {
     updateObject(json);
 });
-socket.on('inactive', function (id) {
-    if (id in $objects) {
-        $objects[id].active = false;
-        $objects[id].status.removeClass("text-success").removeClass("blinking").removeClass("mdi-play")
-            .addClass("text-danger").addClass("mdi-stop");
-        $objects[id].card.removeClass("objectActive");
-    }
-});
 socket.on('close', function (id) {
     if (id in $objects) {
         $objects[id].card.find(".objectActionClose").click();
@@ -319,6 +311,7 @@ function initDialogObject(json){
             label.attr("id", dialog_id + "_" + item.name);
             label.html(item.text);
             $objects[json.id].controls[item.name] = {label: label};
+
         } else if (item.type === "input") {
             temp_clone = dialogInputTemplate.clone();
             var label = temp_clone.find(".dialogLabel");
@@ -328,12 +321,35 @@ function initDialogObject(json){
             input.attr("id", dialog_id + "_" + item.name + "_input");
             label.val(item.value);
 
+            if (item.handle === 'on_change') {
+                let name = item.name;
+                input.keypress(function (event) {
+                    if (event.which === 13) {
+                        socket.emit('send', {
+                            obj_id: json.id,
+                            event: name + "@on_change",
+                            args: [ this.value ]
+                        })
+                    }
+                });
+            }
+
             $objects[json.id].controls[item.name] = {label: label, input: input };
+
         } else if (item.type === "button") {
             temp_clone = dialogButtonTemplate.clone();
             var button = temp_clone.find(".dialogButton");
             button.attr("id", dialog_id + "_" + item.name);
             button.html(item.text);
+            if (item.handle === 'on_click') {
+                button.on('click', function () {
+                    socket.emit('send', {
+                        obj_id: json.id,
+                        event: item.name + "@on_click",
+                        args: []
+                    })
+                });
+            }
             $objects[json.id].controls[item.name] = {button: button};
         }
 
