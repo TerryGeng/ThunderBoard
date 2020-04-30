@@ -168,10 +168,12 @@ class DialogClient(BaseClient):
             self.groups_order.append(name)
 
     def add_button(self, name="", text="", handler=None, control_group="Default", enabled=True):
-        if not name or name in self.fields:
-            raise ValueError("Name can not be empty, or duplicated with other fields.")
+        if not name:
+            raise ValueError("Name can not be empty.")
 
-        self.groups[control_group].append(name)
+        if not name in self.fields:
+            self.groups[control_group].append(name)
+
         self.fields[name] = { 'type': 'button',
                               'text': text,
                               'enabled': enabled }
@@ -179,12 +181,13 @@ class DialogClient(BaseClient):
             self.fields[name]['handle'] = 'on_click'
             self.handlers[name + '@on_click'] = handler
 
-
     def add_input_box(self, name="", label_text="", handler=None, default_value="", control_group="Default", enabled=True):
-        if not name or name in self.fields:
-            raise ValueError("Name can not be empty, or duplicated with other fields.")
+        if not name:
+            raise ValueError("Name can not be empty.")
 
-        self.groups[control_group].append(name)
+        if not name in self.fields:
+            self.groups[control_group].append(name)
+
         self.fields[name] = { 'type': 'input',
                               'text': label_text,
                               'value': default_value,
@@ -194,10 +197,12 @@ class DialogClient(BaseClient):
             self.handlers[name + '@on_change'] = handler
 
     def add_text_label(self, name="", text="", control_group="Default"):
-        if not name or name in self.fields:
-            raise ValueError("Name can not be empty, or duplicated with other fields.")
+        if not name:
+            raise ValueError("Name can not be empty.")
 
-        self.groups[control_group].append(name)
+        if not name in self.fields:
+            self.groups[control_group].append(name)
+
         self.fields[name] = { 'type': 'label',
                               'text': text }
 

@@ -328,7 +328,7 @@ function initDialogObject(json){
                         socket.emit('send', {
                             obj_id: json.id,
                             event: name + "@on_change",
-                            args: [ this.value ]
+                            args: this.value
                         })
                     }
                 });
@@ -342,11 +342,12 @@ function initDialogObject(json){
             button.attr("id", dialog_id + "_" + item.name);
             button.html(item.text);
             if (item.handle === 'on_click') {
+                let name = item.name;
                 button.on('click', function () {
                     socket.emit('send', {
                         obj_id: json.id,
-                        event: item.name + "@on_click",
-                        args: []
+                        event: name + "@on_click",
+                        args: ''
                     })
                 });
             }
