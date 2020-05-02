@@ -29,6 +29,7 @@ class BaseClient:
         self.socket.connect((self.recv_server_host, self.recv_server_port))
 
     def _send(self, data):
+        print("Send")
         sent_len = 0
         with self.socket_send_lock:
             while sent_len < len(data):
@@ -42,7 +43,7 @@ class BaseClient:
                 else:
                     sent_len += chunk_len
 
-    def _send_with_metadata(self, metadata, data: bytes):
+    def _send_with_metadata(self, metadata, data):
         metadata['Type'] = self.type
         metadata['Id'] = self.id
         metadata['Name'] = self.name
@@ -133,22 +134,38 @@ class TextClient(BaseClient):
 
 
 class ImageClient(BaseClient):
-    def __init__(self, name, board="", id="", server_host="localhost", server_port=2333):
+    def __init__(self, name, board="", id="", server_host="localhost", server_port=2333, format="jpeg"):
         super().__init__(name, board, id, server_host, server_port)
         self.type = "image"
+        self.format = format
+        self.metadata['format'] = format
 
     def send(self, image):
-        self._send_with_metadata(self.metadata, image.getvalue())
+        self._send_with_metadata(self.metadata, image.getbuffer())
 
 
 class PlotClient(ImageClient):
-    def __init__(self, name, board="", id="", server_host="localhost", server_port=2333):
-        super().__init__(name, board, id, server_host, server_port)
+    def __init__(self, name, board="", id="", server_host="localhost", server_port=2333, format="png"):
+        super().__init__(name, board, id, server_host, server_port, format)
 
     def send(self, fig): # fig: 'matplotlib.figure.Figure'
         image_buffer = io.BytesIO()
-        fig.savefig(image_buffer, dpi=120, format="jpg")
-        self._send_with_metadata(self.metadata, image_buffer.getvalue())
+        fig.savefig(image_buffer, format=self.format)
+        img_data = image_buffer.getbuffer()
+
+        if self.format == "svg":
+            # Remove useless header (first 4 lines)
+            count = 0
+            pos = 0
+            for i in range(len(img_data)):
+                if img_data[i] == b"\n"[0]:
+                    count += 1
+                if count == 4:
+                    pos = i
+                    break
+            img_data = img_data[pos+1:]
+
+        self._send_with_metadata(self.metadata, img_data)
 
 
 class DialogClient(BaseClient):

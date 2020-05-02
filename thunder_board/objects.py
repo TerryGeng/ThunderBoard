@@ -72,6 +72,7 @@ class ImageObject(BaseObject):
     def __init__(self, name, board):
         super().__init__(name, board)
         self.image = None
+        self.format = "jpeg"
 
     @staticmethod
     def init(name, board):
@@ -79,7 +80,8 @@ class ImageObject(BaseObject):
 
     def update(self, metadata, image):
         self.version += 1
-        if 'compress' not in metadata or metadata['compress'] == 'False':
+        self.format = metadata['format']
+        if 'require_compress' in metadata and metadata['require_compress'] == 'True':
             im = Image.open(io.BytesIO(image))
             im.thumbnail(self.IMAGE_MAX_SIZE, Image.ANTIALIAS)
             buffer = io.BytesIO()
@@ -91,6 +93,7 @@ class ImageObject(BaseObject):
 
     def dump_to(self, dump_to):
         dump_to['data'] = self.image
+        dump_to['format'] = self.format
         return dump_to
 
 

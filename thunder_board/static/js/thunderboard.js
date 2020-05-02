@@ -211,9 +211,17 @@ function updateTextObject(json){
 }
 
 function initImageObject(json){
+    var format = ($objects[json.id].format =  json.format);
+
     var img_id = "object_img_" + json.id;
     $objects[json.id].content.empty();
-    var img = $(`<img id="${img_id}" src="data:image/jpeg;base64,${json.data}" />`);
+
+    var img;
+    if (format === "jpeg" || format === "jpg" || format === "png" || format === "gif") {
+        img = $(`<img id="${img_id}"  alt="Image" />`);
+    } else if (format === "svg") {
+        img = $(`<div id="${img_id}"></div>`);
+    }
     img.css("max-width", "100%");
     img.appendTo($objects[json.id].content);
     $objects[json.id].card.resizable({ handles: "n, s" });
@@ -225,7 +233,15 @@ function initImageObject(json){
 }
 
 function updateImageObject(json){
-    $objects[json.id].img.attr("src", `data:image/jpeg;base64,${json.data}`);
+    if ($objects[json.id].format!== json.format) {
+        initImageObject(json);
+    }
+
+    if (format === "jpeg" || format === "jpg" || format === "png" || format === "gif") {
+        $objects[json.id].img.attr("src", `data:image/${format};base64,${json.data}`);
+    } else if (format === "svg") {
+        $(json.data).appendTo($objects[json.id].img);
+    }
 }
 
 function setSortable() {
