@@ -81,15 +81,19 @@ class ImageObject(BaseObject):
     def update(self, metadata, image):
         self.version += 1
         self.format = metadata['format']
-        if 'require_compress' in metadata and metadata['require_compress'] == 'True':
-            im = Image.open(io.BytesIO(image))
-            im.thumbnail(self.IMAGE_MAX_SIZE, Image.ANTIALIAS)
-            buffer = io.BytesIO()
-            im = im.convert("RGB")
-            im.save(buffer, format="JPEG", dpi=[100, 100], quality=90)
-            self.image = base64.b64encode(buffer.getvalue()).decode('utf-8')
+        if self.format != "svg":
+            if 'require_compress' in metadata and metadata['require_compress'] == 'True':
+                logging.debug("Image requires compressing")
+                im = Image.open(io.BytesIO(image))
+                im.thumbnail(self.IMAGE_MAX_SIZE, Image.ANTIALIAS)
+                buffer = io.BytesIO()
+                im = im.convert("RGB")
+                im.save(buffer, format="JPEG", dpi=[100, 100], quality=90)
+                self.image = base64.b64encode(buffer.getvalue()).decode('utf-8')
+            else:
+                self.image = base64.b64encode(image).decode('utf-8')
         else:
-            self.image = base64.b64encode(image).decode('utf-8')
+            self.image = image.decode('utf-8').strip()
 
     def dump_to(self, dump_to):
         dump_to['data'] = self.image

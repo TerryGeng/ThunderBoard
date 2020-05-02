@@ -29,7 +29,6 @@ class BaseClient:
         self.socket.connect((self.recv_server_host, self.recv_server_port))
 
     def _send(self, data):
-        print("Send")
         sent_len = 0
         with self.socket_send_lock:
             while sent_len < len(data):
@@ -43,12 +42,30 @@ class BaseClient:
                 else:
                     sent_len += chunk_len
 
+    def _send_control_msg(self, control_msg):
+        metadata = {
+            "Id": self.id,
+            "CTL": control_msg
+        }
+
+        metadata_str = ""
+        for key, value in metadata.items():
+            metadata_str += f"{key}={value}\n"
+
+        metadata = bytes(metadata_str, 'utf-8')
+        metadata_len = struct.pack("h", len(metadata))
+
+        to_be_sent = metadata_len + metadata
+
+        self._send(to_be_sent)
+
     def _send_with_metadata(self, metadata, data):
         metadata['Type'] = self.type
         metadata['Id'] = self.id
         metadata['Name'] = self.name
         metadata['Board'] = self.board
         metadata['Length'] = len(data)
+        metadata['CTL'] = "DATA"
 
         metadata_str = ""
         for key, value in metadata.items():
@@ -67,7 +84,7 @@ class BaseClient:
                 time.sleep(3)
                 self._send(struct.pack("h", 0))
             else:
-                self._send_with_metadata({'PING': 1}, b'')
+                self._send_control_msg("PING")
 
     def _recv_chunk(self, _socket, length):
         received = 0
@@ -107,12 +124,12 @@ class BaseClient:
         raise NotImplementedError
 
     def close(self):
-        self._send_with_metadata({"Inactive": 1, 'Id': self.id}, b"")
+        self._send_control_msg("INACTIVE")
         self.socket.close()
         self.socket = None
 
     def close_and_discard(self):
-        self._send_with_metadata({"Inactive": 1, 'Discard': 1, 'Id': self.id}, b"")
+        self._send_control_msg("DISCARD")
         self.socket.close()
         self.socket = None
 
@@ -154,18 +171,22 @@ class PlotClient(ImageClient):
         img_data = image_buffer.getbuffer()
 
         if self.format == "svg":
-            # Remove useless header (first 4 lines)
-            count = 0
-            pos = 0
-            for i in range(len(img_data)):
-                if img_data[i] == b"\n"[0]:
-                    count += 1
-                if count == 4:
-                    pos = i
-                    break
-            img_data = img_data[pos+1:]
+            img_data = self.sanitize_mpl_svg(img_data)
 
         self._send_with_metadata(self.metadata, img_data)
+
+    def sanitize_mpl_svg(self, buf: memoryview):
+        line_to_remove = [0, 1, 2, 3, 5, 6, 7, 8, 9]
+        current_line = 0
+        for i in range(len(buf)):
+            if buf[i] == b"\n"[0]:
+                current_line += 1
+                if current_line > max(line_to_remove):
+                    break
+            if current_line in line_to_remove:
+                buf[i] = b" "[0]
+
+        return buf
 
 
 class DialogClient(BaseClient):

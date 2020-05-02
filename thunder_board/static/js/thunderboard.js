@@ -237,10 +237,13 @@ function updateImageObject(json){
         initImageObject(json);
     }
 
+    var format = $objects[json.id].format;
     if (format === "jpeg" || format === "jpg" || format === "png" || format === "gif") {
         $objects[json.id].img.attr("src", `data:image/${format};base64,${json.data}`);
     } else if (format === "svg") {
-        $(json.data).appendTo($objects[json.id].img);
+        $objects[json.id].img.empty();
+        var svg = $(json.data);
+        svg.appendTo($objects[json.id].img);
     }
 }
 

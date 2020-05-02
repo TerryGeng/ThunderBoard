@@ -93,10 +93,8 @@ class DashboardServer:
                 logging.debug(f"Packet received, metadata {metadata}")
 
                 id = metadata['Id']
-                type = metadata['Type']
-                name = metadata['Name']
-                board = metadata['Board']
-                length = int(metadata['Length'])
+                length = int(metadata['Length']) if 'Length' in metadata else 0
+                control_msg = metadata['CTL']
 
                 data = self.recv_chunk(conn, length)
 
@@ -105,36 +103,46 @@ class DashboardServer:
                     self.objects[id].active = True
                     self.objects[id].socket = conn
 
-                if 'PING' in metadata:
-                    logging.debug(f"PING packet received for {id}")
-                    continue
-
-                if 'Inactive' in metadata:
-                    if id in self.objects:
+                    if control_msg == "PING":
+                        logging.debug(f"PING packet received for {id}")
+                        continue
+                    elif control_msg == "INACTIVE" or control_msg == "DISCARD":
                         self.objects[id].active = False
                         self.objects[id].socket = None
-                        logging.info(f"Set Inactive flag to object {name} ({id})")
-                        if 'Discard' in metadata:
+                        logging.info(f"Set Inactive flag to object {self.objects[id].name} ({id})")
+                        if control_msg == "DISCARD":
                             del self.object_subscriptions[id]
                             del self.objects[id]
                             self.socketio.emit("close", id, room=id)
                             self.socketio.close_room(id)
-                    return
+                            return
+                    elif control_msg == "DATA":
+                        self.objects[id].update(metadata, data.tobytes())
+                else:
+                    if control_msg == "DATA":
+                        logging.info("Create object %s" % id)
+                        type = metadata['Type']
+                        name = metadata['Name']
+                        board = metadata['Board']
+                        self.objects[id] = self.object_create_handlers[type](name, board)
+                        self.objects[id].socket = conn
+                        self.object_subscriptions[id] = []
+                        self.send_new_object_notification(id)
+                        self.objects[id].update(metadata, data.tobytes())
+                    else:
+                        continue
 
-                if not id in self.objects:
-                    logging.info("Create object %s" % id)
-                    self.objects[id] = self.object_create_handlers[type](name, board)
-                    self.objects[id].socket = conn
-                    self.object_subscriptions[id] = []
-                    self.send_new_object_notification(id)
-
-                self.objects[id].update(metadata, data.tobytes())
                 self.send_update(id)
+
             except ConnectionError:
                 logging.debug(f"Lost connection with {addr[0]}:{addr[1]}")
                 if id:
                     self.wait_check_alive(id)
                 return
+            except KeyError:
+                logging.error(f"Ill-formatted packet from {addr[0]}:{addr[1]}.")
+                return
+
 
     def wait_check_alive(self, id):
         time.sleep(5)
