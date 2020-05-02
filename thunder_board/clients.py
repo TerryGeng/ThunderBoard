@@ -66,7 +66,6 @@ class BaseClient:
                 time.sleep(3)
                 self._send(struct.pack("h", 0))
             else:
-                self._establish()
                 self._send_with_metadata({'PING': 1}, b'')
 
     def _recv_chunk(self, _socket, length):
