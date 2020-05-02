@@ -204,12 +204,12 @@ class DialogClient(BaseClient):
             self.groups[name] = []
             self.groups_order.append(name)
 
-    def add_button(self, name="", text="", handler=None, control_group="Default", enabled=True):
+    def add_button(self, name="", text="", handler=None, group="Default", enabled=True):
         if not name:
             raise ValueError("Name can not be empty.")
 
         if not name in self.fields:
-            self.groups[control_group].append(name)
+            self.groups[group].append(name)
 
         self.fields[name] = { 'type': 'button',
                               'text': text,
@@ -218,12 +218,12 @@ class DialogClient(BaseClient):
             self.fields[name]['handle'] = 'on_click'
             self.handlers[name + '@on_click'] = handler
 
-    def add_input_box(self, name="", label_text="", handler=None, default_value="", control_group="Default", enabled=True):
+    def add_input_box(self, name="", label_text="", handler=None, default_value="", group="Default", enabled=True):
         if not name:
             raise ValueError("Name can not be empty.")
 
         if not name in self.fields:
-            self.groups[control_group].append(name)
+            self.groups[group].append(name)
 
         self.fields[name] = { 'type': 'input',
                               'text': label_text,
@@ -233,17 +233,17 @@ class DialogClient(BaseClient):
             self.fields[name]['handle'] = 'on_change'
             self.handlers[name + '@on_change'] = handler
 
-    def add_text_label(self, name="", text="", control_group="Default"):
+    def add_text_label(self, name="", text="", group="Default"):
         if not name:
             raise ValueError("Name can not be empty.")
 
         if not name in self.fields:
-            self.groups[control_group].append(name)
+            self.groups[group].append(name)
 
         self.fields[name] = { 'type': 'label',
                               'text': text }
 
-    def add_slider(self, name="", label_text="", value_range=None, default_value="", control_group="Default", enabled=True):
+    def add_slider(self, name="", label_text="", value_range=None, default_value="", group="Default", enabled=True):
         pass
 
     def display(self):
