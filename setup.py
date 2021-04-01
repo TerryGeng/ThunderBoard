@@ -17,7 +17,7 @@ requirements = parse_requirements(
 
 setuptools.setup(
     name='thunder-board-terry-geng',
-    version='0.2a1',
+    version='0.3',
     url='https://github.com/TerryGeng/ThunderBoard',
     license='MIT License',
     author='Terry Geng',
