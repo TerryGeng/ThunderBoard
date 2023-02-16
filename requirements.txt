@@ -8,4 +8,4 @@ Pillow==9.0.1
 python-engineio==4.0.1
 python-socketio==5.1.0
 six==1.14.0
-Werkzeug==1.0.1
+Werkzeug==2.2.3
