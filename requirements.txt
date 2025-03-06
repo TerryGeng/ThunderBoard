@@ -2,7 +2,7 @@ click==7.1.1
 Flask==2.3.2
 Flask-SocketIO==5.0.1
 itsdangerous==1.1.0
-Jinja2==3.1.4
+Jinja2==3.1.6
 MarkupSafe==1.1.1
 Pillow==10.2.0
 python-engineio==4.0.1
